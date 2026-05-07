@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { restaurants } from '../data/restaurants';
+import HeroImage from '../components/HeroImage';
 import Reveal from '../components/Reveal';
 import PageTransition from '../components/PageTransition';
 
@@ -10,14 +11,24 @@ export default function Contact() {
 
   return (
     <PageTransition>
-      <section className="relative pt-40 pb-12">
-        <div className="mx-auto max-w-[1500px] px-6 lg:px-10">
-          <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400/80">
+      <section className="relative pt-32 pb-12 overflow-hidden">
+        {/* Faint Gas House mood backdrop */}
+        <div className="absolute inset-0 -z-10 opacity-25">
+          <HeroImage slug="the-gas-house" fallbackAccent="#C77B49" alt="" />
+        </div>
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ink-500/60 via-ink-500/85 to-ink-500" />
+
+        <div className="mx-auto max-w-[1500px] px-6 lg:px-10 pt-12">
+          <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400">
             Get in Touch
           </div>
           <h1 className="font-display text-[clamp(3rem,8vw,8rem)] leading-[0.95] tracking-tight text-cream-100 mt-4">
-            Say hello.
+            Say <span className="italic font-normal text-gold-400">hello.</span>
           </h1>
+          <p className="mt-6 max-w-2xl text-lg text-cream-100/80">
+            Reservations, private events, press, feedback — pick a topic and we'll get back to
+            you within a business day.
+          </p>
         </div>
       </section>
 

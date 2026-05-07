@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { restaurants } from '../data/restaurants';
+import HeroImage from '../components/HeroImage';
 import Reveal from '../components/Reveal';
 import PageTransition from '../components/PageTransition';
 
@@ -21,15 +22,25 @@ export default function Jobs() {
 
   return (
     <PageTransition>
-      <section className="relative pt-40 pb-12">
-        <div className="mx-auto max-w-[1500px] px-6 lg:px-10">
-          <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400/80">
+      <section className="relative pt-32 pb-12 overflow-hidden">
+        {/* Hero collage strip — montage of 4 restaurants behind the headline */}
+        <div className="absolute inset-0 -z-10 grid grid-cols-2 lg:grid-cols-4 opacity-25">
+          {restaurants.slice(0, 4).map((r) => (
+            <div key={r.slug} className="relative">
+              <HeroImage slug={r.slug} fallbackAccent={r.accent} alt="" />
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ink-500/60 via-ink-500/85 to-ink-500" />
+
+        <div className="mx-auto max-w-[1500px] px-6 lg:px-10 pt-12">
+          <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400">
             Now Hiring · Fort Wayne
           </div>
           <h1 className="font-display text-[clamp(3rem,8vw,8rem)] leading-[0.95] tracking-tight text-cream-100 mt-4">
-            Work with the family.
+            Work with the <span className="italic font-normal text-gold-400">family.</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-lg text-cream-100/75">
+          <p className="mt-6 max-w-2xl text-lg text-cream-100/85">
             We've been on the same payroll books since 1946. Generous tips, real benefits,
             schedules that work around school and family. Start anytime.
           </p>

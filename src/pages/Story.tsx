@@ -69,6 +69,17 @@ function Origins() {
           </h2>
         </Reveal>
         <Reveal delay={0.1} className="lg:col-span-7 space-y-5 text-lg leading-relaxed text-cream-100/80">
+          <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-cream-100/10 shadow-2xl relative mb-3">
+            <img
+              src={`${import.meta.env.BASE_URL}timeline/1918-meat-market.jpg`}
+              alt="The Hall family butcher shop on Bluffton Road, 1918"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(26,20,16,0.35) 100%)' }} />
+            <div className="absolute bottom-3 left-3 font-mono text-[10px] uppercase tracking-[0.25em] text-cream-100/85 bg-ink-500/60 backdrop-blur-sm px-2.5 py-1 rounded">
+              c. 1918 — Bluffton Road
+            </div>
+          </div>
           <p>
             The Halls opened a butcher shop on Bluffton Road in 1918. The grandfather ran it
             first; when he died, the father came home from Indiana University to take over —
@@ -118,7 +129,7 @@ function Timeline() {
             className="absolute left-4 lg:left-1/2 top-0 -translate-x-1/2 w-px bg-gradient-to-b from-gold-400 via-ember-500 to-ember-700"
           />
 
-          <ol className="space-y-20">
+          <ol className="space-y-24">
             {storyTimeline.map((event, i) => (
               <Reveal key={event.year}>
                 <li
@@ -138,12 +149,27 @@ function Timeline() {
                     <div className="font-display italic text-7xl lg:text-8xl text-gold-400 mt-1 leading-none">
                       {event.year}
                     </div>
+                    {event.image && (
+                      <TimelineImage
+                        src={event.image}
+                        alt={event.imageAlt ?? event.title}
+                        align={i % 2 ? 'left' : 'right'}
+                      />
+                    )}
                   </div>
                   <div className="lg:px-12 space-y-4">
                     <h3 className="font-display text-3xl text-cream-100">{event.title}</h3>
                     <p className="text-cream-100/80 leading-relaxed">{event.body}</p>
                     {event.caption && (
                       <p className="font-script text-2xl text-gold-400/90">{event.caption}</p>
+                    )}
+                    {event.linkSlug && (
+                      <Link
+                        to={`/restaurants/${event.linkSlug}`}
+                        className="inline-flex items-center gap-2 text-sm font-mono uppercase tracking-wider text-gold-400/80 hover:text-gold-400 transition pt-2"
+                      >
+                        Visit today →
+                      </Link>
                     )}
                   </div>
                 </li>
@@ -153,6 +179,37 @@ function Timeline() {
         </div>
       </div>
     </section>
+  );
+}
+
+function TimelineImage({
+  src,
+  alt,
+  align,
+}: {
+  src: string;
+  alt: string;
+  align: 'left' | 'right';
+}) {
+  return (
+    <div
+      className={`mt-6 ${align === 'right' ? 'lg:ml-auto' : ''} max-w-md aspect-[4/3] rounded-2xl overflow-hidden border border-cream-100/10 shadow-2xl relative`}
+    >
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      {/* Subtle vignette overlay for vintage feel */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse at center, transparent 50%, rgba(26,20,16,0.3) 100%)',
+        }}
+      />
+    </div>
   );
 }
 

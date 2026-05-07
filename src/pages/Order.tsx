@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { restaurants, getRestaurant, type Restaurant } from '../data/restaurants';
+import { getMenu } from '../data/menus';
 import HeroImage from '../components/HeroImage';
+import RestaurantLogo from '../components/RestaurantLogo';
+import MenuRenderer from '../components/MenuRenderer';
 import PageTransition from '../components/PageTransition';
 import { useCart, type CartItem } from '../lib/cart';
 
@@ -72,10 +75,10 @@ function ChooseRestaurant() {
                   <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105">
                     <HeroImage slug={r.slug} fallbackAccent={r.accent} alt={r.name} />
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink-500/90 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink-500/95 via-ink-500/40 to-transparent" />
                   <div className="relative h-full p-5 flex flex-col justify-end">
-                    <div className="font-display text-2xl text-cream-100">{r.name}</div>
-                    <div className="text-sm text-cream-100/70 mt-1">{r.cuisine}</div>
+                    <RestaurantLogo slug={r.slug} name={r.name} shortName={r.shortName} size="md" invert />
+                    <div className="text-sm text-cream-100/70 mt-3">{r.cuisine}</div>
                     <div className="mt-3 font-mono text-xs uppercase tracking-wider text-gold-400 group-hover:text-cream-100 transition">
                       Start order →
                     </div>
@@ -109,22 +112,17 @@ function OrderHero({ r, step, setStep }: { r: Restaurant; step: Step; setStep: (
           ← All Restaurants
         </Link>
         <div className="mt-4 flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400">
-              Ordering from
-            </div>
-            <h1 className="font-display text-5xl lg:text-7xl leading-[0.95] text-cream-100 mt-1">
-              {r.name}
-            </h1>
-            <div className="font-script text-2xl mt-2" style={{ color: r.accent }}>
-              {r.tagline}
+          <div className="flex items-end gap-6">
+            <RestaurantLogo slug={r.slug} name={r.name} shortName={r.shortName} size="lg" invert />
+            <div className="hidden md:block">
+              <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400">
+                Ordering from
+              </div>
+              <div className="font-script text-2xl mt-1" style={{ color: r.accent }}>{r.tagline}</div>
             </div>
           </div>
           {count > 0 && step === 'menu' && (
-            <button
-              onClick={() => setStep('cart')}
-              className="btn-primary"
-            >
+            <button onClick={() => setStep('cart')} className="btn-primary">
               View cart · {count} item{count > 1 ? 's' : ''} · ${total.toFixed(2)}
             </button>
           )}
@@ -161,71 +159,48 @@ function OrderHero({ r, step, setStep }: { r: Restaurant; step: Step; setStep: (
 }
 
 function FullMenu({ r, onCheckout }: { r: Restaurant; onCheckout: () => void }) {
-  const { add, count, total } = useCart();
+  const { count, total } = useCart();
+  const menu = getMenu(r.slug);
+
+  if (!menu) {
+    return (
+      <section className="py-20 text-center">
+        <div className="mx-auto max-w-md px-6">
+          <h2 className="font-display text-3xl text-cream-100">Menu unavailable</h2>
+          <p className="text-cream-100/60 mt-3">This restaurant's menu isn't available for online ordering yet.</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="relative py-12 lg:py-20">
       <div className="mx-auto max-w-[1500px] px-6 lg:px-10 grid lg:grid-cols-12 gap-10">
         <div className="lg:col-span-8">
           <h2 className="font-display text-3xl lg:text-5xl text-cream-100">The Menu</h2>
           <p className="text-cream-100/65 mt-2">
-            Add items to your cart, then move to checkout. This is a demo of the ordering flow —
-            no charges are processed.
+            Tap "+ Add" on anything to drop it in the cart. Demo only — no charges processed.
           </p>
 
-          <div className="mt-10 space-y-3">
-            {r.menuHighlights.map((m) => (
-              <div
-                key={m.name}
-                className="group flex items-start gap-4 p-5 rounded-xl bg-ink-200/40 border border-cream-100/10 hover:border-cream-100/30 transition"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-3">
-                    <h3 className="font-display text-xl text-cream-100">{m.name}</h3>
-                    {m.tag && (
-                      <span
-                        className="font-mono text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border"
-                        style={{ borderColor: `${r.accent}88`, color: r.accent }}
-                      >
-                        {m.tag}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-cream-100/65 mt-1.5 leading-relaxed">{m.description}</p>
-                </div>
-                <div className="text-right shrink-0 space-y-2">
-                  <div className="font-display text-2xl text-gold-400">${m.price}</div>
-                  <button
-                    onClick={() =>
-                      add({
-                        id: `${r.slug}__${m.name}`,
-                        restaurantSlug: r.slug,
-                        restaurantName: r.name,
-                        name: m.name,
-                        price: m.price,
-                      })
-                    }
-                    className="rounded-full bg-ember-600 hover:bg-ember-500 transition px-4 py-1.5 text-xs font-mono uppercase tracking-wider text-cream-100"
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="mt-10">
+            <MenuRenderer
+              menu={menu}
+              restaurantName={r.name}
+              accent={r.accent}
+              showCategoryNav
+            />
           </div>
         </div>
 
         <aside className="lg:col-span-4 lg:sticky lg:top-28 lg:h-fit">
-          <CartPanel onCheckout={onCheckout} accent={r.accent} />
+          <CartPanel accent={r.accent} />
           {count === 0 && (
             <p className="mt-4 text-center text-sm text-cream-100/50">
-              Cart is empty. Add an item to begin.
+              Cart is empty. Tap any "+ Add" to begin.
             </p>
           )}
           {count > 0 && (
-            <button
-              onClick={onCheckout}
-              className="mt-4 w-full btn-primary justify-center"
-            >
+            <button onClick={onCheckout} className="mt-4 w-full btn-primary justify-center">
               Checkout · ${total.toFixed(2)}
             </button>
           )}
@@ -235,14 +210,12 @@ function FullMenu({ r, onCheckout }: { r: Restaurant; onCheckout: () => void }) 
   );
 }
 
-function CartPanel({ onCheckout, accent }: { onCheckout?: () => void; accent: string }) {
+function CartPanel({ accent }: { accent: string }) {
   const { state, inc, dec, remove, total } = useCart();
   return (
     <div className="rounded-2xl bg-ink-300/60 border border-cream-100/10 p-5">
       <div className="flex items-center justify-between">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-cream-100/60">
-          Your Cart
-        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-cream-100/60">Your Cart</div>
         <div className="font-display text-2xl text-gold-400">${total.toFixed(2)}</div>
       </div>
       <div className="mt-4 space-y-3 max-h-[420px] overflow-auto pr-1">
@@ -250,7 +223,14 @@ function CartPanel({ onCheckout, accent }: { onCheckout?: () => void; accent: st
           <div className="text-sm text-cream-100/50">Your cart is empty.</div>
         )}
         {state.items.map((i) => (
-          <CartLine key={i.id} item={i} accent={accent} onInc={() => inc(i.id)} onDec={() => dec(i.id)} onRemove={() => remove(i.id)} />
+          <CartLine
+            key={i.id}
+            item={i}
+            accent={accent}
+            onInc={() => inc(i.id)}
+            onDec={() => dec(i.id)}
+            onRemove={() => remove(i.id)}
+          />
         ))}
       </div>
       {state.items.length > 0 && (
@@ -296,7 +276,7 @@ function CartLine({
       <div className="flex-1 min-w-0">
         <div className="text-sm text-cream-100">{item.name}</div>
         <div className="font-mono text-[10px] uppercase tracking-wider text-cream-100/40">
-          ${item.price} ea
+          ${item.price.toFixed(2)} ea
         </div>
       </div>
       <div className="flex items-center gap-2 text-cream-100/80">
@@ -372,9 +352,7 @@ function Checkout({ r, onBack, onComplete }: { r: Restaurant; onBack: () => void
       <div className="mx-auto max-w-3xl px-6 space-y-10">
         <div>
           <h2 className="font-display text-4xl lg:text-5xl text-cream-100">Checkout</h2>
-          <p className="text-cream-100/60 mt-2 text-sm">
-            Demo only — no payment is processed.
-          </p>
+          <p className="text-cream-100/60 mt-2 text-sm">Demo only — no payment processed.</p>
         </div>
 
         <div>
@@ -465,9 +443,7 @@ function OrderConfirmed({ r }: { r: Restaurant }) {
             ✓
           </div>
           <h2 className="font-display text-5xl lg:text-7xl text-cream-100 mt-6">Order placed.</h2>
-          <p className="text-cream-100/70 mt-4 text-lg">
-            Thanks. {r.name} is firing up your ticket now.
-          </p>
+          <p className="text-cream-100/70 mt-4 text-lg">Thanks. {r.name} is firing up your ticket now.</p>
 
           <div className="mt-10 rounded-2xl bg-ink-300/60 border border-cream-100/10 p-6 text-left">
             <div className="flex justify-between text-sm font-mono uppercase tracking-wider text-cream-100/60">

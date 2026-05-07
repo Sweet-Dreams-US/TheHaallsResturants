@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { restaurants } from '../data/restaurants';
+import { masterLogo } from '../data/logos';
 
 export default function Footer() {
   return (
@@ -7,7 +8,12 @@ export default function Footer() {
       <div className="mx-auto max-w-[1500px] px-6 lg:px-10 py-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
           <div className="md:col-span-4">
-            <div className="font-display text-3xl text-cream-100">Don Hall's</div>
+            <img
+              src={masterLogo}
+              alt="Don Hall's"
+              className="h-12 w-auto object-contain mb-3"
+              style={{ filter: 'invert(0.96) sepia(0.18) saturate(1.2) hue-rotate(345deg) brightness(1.06)' }}
+            />
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-gold-400/80 mt-1">
               Serving it hot since 1946
             </div>

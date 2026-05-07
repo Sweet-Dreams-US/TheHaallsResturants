@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { restaurants } from '../data/restaurants';
+import { masterLogo } from '../data/logos';
 import { useCart } from '../lib/cart';
 
 const primary = [
@@ -42,9 +43,13 @@ export default function Nav() {
       <div className="mx-auto max-w-[1500px] px-6 lg:px-10">
         <div className="flex items-center justify-between h-20">
           <Link to="/" className="group flex items-center gap-3">
-            <Logo />
-            <div className="leading-tight">
-              <div className="font-display text-xl tracking-tight text-cream-100">Don Hall's</div>
+            <img
+              src={masterLogo}
+              alt="Don Hall's Restaurants"
+              className="h-9 lg:h-10 w-auto object-contain"
+              style={{ filter: 'invert(0.96) sepia(0.18) saturate(1.2) hue-rotate(345deg) brightness(1.06)' }}
+            />
+            <div className="leading-tight hidden sm:block">
               <div className="font-mono text-[9px] uppercase tracking-[0.32em] text-gold-400/80">
                 Est. 1946 · Fort Wayne
               </div>
@@ -195,11 +200,4 @@ export default function Nav() {
   );
 }
 
-function Logo() {
-  return (
-    <div className="relative h-11 w-11 grid place-items-center rounded-full border border-gold-400/40 bg-gradient-to-br from-ember-700 to-ember-900 group-hover:border-gold-400 transition">
-      <span className="font-display italic font-bold text-gold-400 text-lg leading-none">H</span>
-      <span className="absolute -inset-px rounded-full border border-gold-400/20 group-hover:animate-slow-spin" />
-    </div>
-  );
-}
+// Logo emblem replaced by the real Don Hall's script wordmark.

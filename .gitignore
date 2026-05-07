@@ -13,3 +13,8 @@ dist-ssr
 
 # Unrelated nested project that landed in this folder
 DeerParkIrishPub/
+
+# Drop-zone for real reference photos (private, not deployed)
+reference-media/*
+!reference-media/README.md
+!reference-media/.gitkeep

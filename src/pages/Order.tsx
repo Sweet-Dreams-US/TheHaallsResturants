@@ -346,7 +346,9 @@ function CartReview({ r, onBack, onNext }: { r: Restaurant; onBack: () => void; 
 
 function Checkout({ r, onBack, onComplete }: { r: Restaurant; onBack: () => void; onComplete: () => void }) {
   const { total } = useCart();
-  const [method, setMethod] = useState<'pickup' | 'delivery'>('pickup');
+  // 'delivery' is intentionally not selectable — kept on the page so the option
+  // is visible but greyed out (real third-party-delivery integration would go here).
+  const [method, setMethod] = useState<'pickup'>('pickup');
   return (
     <section className="py-12 lg:py-20">
       <div className="mx-auto max-w-3xl px-6 space-y-10">
@@ -360,22 +362,31 @@ function Checkout({ r, onBack, onComplete }: { r: Restaurant; onBack: () => void
             How are we sending it
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {(['pickup', 'delivery'] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMethod(m)}
-                className={`text-left p-5 rounded-xl border transition ${
-                  method === m
-                    ? 'border-gold-400 bg-gold-400/5 ring-2 ring-gold-400/20'
-                    : 'border-cream-100/10 hover:border-cream-100/30 bg-ink-300/40'
-                }`}
-              >
-                <div className="font-display text-2xl text-cream-100 capitalize">{m}</div>
-                <div className="text-sm text-cream-100/60 mt-1">
-                  {m === 'pickup' ? `Ready in ~22 min · ${r.address}` : '30-45 min · 4 mile radius'}
-                </div>
-              </button>
-            ))}
+            <button
+              onClick={() => setMethod('pickup')}
+              className={`text-left p-5 rounded-xl border transition ${
+                method === 'pickup'
+                  ? 'border-gold-400 bg-gold-400/5 ring-2 ring-gold-400/20'
+                  : 'border-cream-100/10 hover:border-cream-100/30 bg-ink-300/40'
+              }`}
+            >
+              <div className="font-display text-2xl text-cream-100 capitalize">Pickup</div>
+              <div className="text-sm text-cream-100/60 mt-1">
+                Ready in ~22 min · {r.address}
+              </div>
+            </button>
+            <button
+              disabled
+              className="text-left p-5 rounded-xl border border-cream-100/10 bg-ink-300/20 opacity-50 cursor-not-allowed relative"
+            >
+              <div className="absolute top-3 right-3 font-mono text-[9px] uppercase tracking-[0.2em] text-cream-100/40 px-2 py-0.5 rounded-full border border-cream-100/15">
+                Coming soon
+              </div>
+              <div className="font-display text-2xl text-cream-100/70 capitalize">Delivery</div>
+              <div className="text-sm text-cream-100/40 mt-1">
+                Available on request — third-party integration
+              </div>
+            </button>
           </div>
         </div>
 

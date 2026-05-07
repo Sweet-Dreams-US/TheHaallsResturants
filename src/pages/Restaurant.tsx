@@ -3,9 +3,11 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
 import { restaurants, getRestaurant } from '../data/restaurants';
 import { getMenu } from '../data/menus';
+import { getGallery } from '../data/galleries';
 import HeroImage from '../components/HeroImage';
 import RestaurantLogo from '../components/RestaurantLogo';
 import MenuRenderer from '../components/MenuRenderer';
+import Gallery from '../components/Gallery';
 import Reveal from '../components/Reveal';
 import PageTransition from '../components/PageTransition';
 
@@ -15,6 +17,7 @@ export default function RestaurantPage() {
   if (!r) return <Navigate to="/restaurants" replace />;
 
   const menu = getMenu(r.slug);
+  const gallery = getGallery(r.slug);
   const idx = restaurants.findIndex((x) => x.slug === r.slug);
   const prev = restaurants[(idx + restaurants.length - 1) % restaurants.length];
   const next = restaurants[(idx + 1) % restaurants.length];
@@ -24,6 +27,7 @@ export default function RestaurantPage() {
       <Hero r={r} />
       <Intro r={r} />
       <SignatureStrip r={r} />
+      {gallery.length > 0 && <Gallery images={gallery} accent={r.accent} />}
       {menu && (
         <section className="relative py-16 lg:py-24">
           <div className="mx-auto max-w-[1500px] px-6 lg:px-10">

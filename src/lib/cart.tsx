@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
 
 export type CartItem = {
   id: string;
@@ -27,7 +27,6 @@ const initial: CartState = { items: [], restaurantSlug: null };
 function reducer(state: CartState, action: Action): CartState {
   switch (action.type) {
     case 'ADD': {
-      // Single-restaurant cart: clear if switching restaurants
       const wrong = state.restaurantSlug && state.restaurantSlug !== action.item.restaurantSlug;
       const baseItems = wrong ? [] : state.items;
       const exists = baseItems.find((i) => i.id === action.item.id);
@@ -58,6 +57,11 @@ function reducer(state: CartState, action: Action): CartState {
   }
 }
 
+/** A "last add" event — emitted when the cart adds an item, used for floating
+ * toast confirmation. We keep an incrementing tick so consumers can react to
+ * the same item being added twice in a row. */
+type LastAdd = { item: Omit<CartItem, 'qty'>; tick: number } | null;
+
 const CartCtx = createContext<{
   state: CartState;
   add: (item: Omit<CartItem, 'qty'>) => void;
@@ -67,24 +71,30 @@ const CartCtx = createContext<{
   clear: () => void;
   total: number;
   count: number;
+  lastAdd: LastAdd;
 } | null>(null);
 
 const STORAGE_KEY = 'donhalls.cart.v1';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initial);
+  const [lastAdd, setLastAdd] = useState<LastAdd>(null);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) dispatch({ type: 'HYDRATE', state: JSON.parse(raw) });
-    } catch { /* noop */ }
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch { /* noop */ }
+    } catch {
+      // ignore
+    }
   }, [state]);
 
   const total = state.items.reduce((sum, i) => sum + i.price * i.qty, 0);
@@ -94,13 +104,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartCtx.Provider
       value={{
         state,
-        add: (item) => dispatch({ type: 'ADD', item }),
+        add: (item) => {
+          dispatch({ type: 'ADD', item });
+          setLastAdd({ item, tick: Date.now() });
+        },
         remove: (id) => dispatch({ type: 'REMOVE', id }),
         inc: (id) => dispatch({ type: 'INC', id }),
         dec: (id) => dispatch({ type: 'DEC', id }),
-        clear: () => dispatch({ type: 'CLEAR' }),
+        clear: () => {
+          dispatch({ type: 'CLEAR' });
+          setLastAdd(null);
+        },
         total,
         count,
+        lastAdd,
       }}
     >
       {children}

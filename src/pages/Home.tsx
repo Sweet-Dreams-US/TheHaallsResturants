@@ -281,7 +281,10 @@ function StoryTeaser() {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-ink-200 border border-cream-100/10">
+          {/* aspect-[8/9] = ~10% shorter than the original aspect-[4/5].
+              Math: 4/5 means height = 1.25 × width; 10% off that height
+              gives 1.125 × width, which is 8/9. */}
+          <div className="relative aspect-[8/9] rounded-2xl overflow-hidden bg-ink-200 border border-cream-100/10">
             <HeroImage
               slug="halls-hollywood"
               fallbackAccent="#FF3B7A"

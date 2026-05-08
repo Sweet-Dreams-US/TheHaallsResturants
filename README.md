@@ -2,7 +2,7 @@
 
 A full demo site for [Don Hall's Restaurants](https://www.donhalls.com/) — Fort Wayne's family-run dining group, serving since 1946. Built as a creative concept piece showcasing all ten restaurant concepts, the Hall family story, online ordering, gift cards, and more.
 
-**Live demo:** https://sweet-dreams-us.github.io/TheHaallsResturants/
+**Live demo:** https://sweet-dreams-us.github.io/DonHallsRestaurants/
 
 ## Stack
 

@@ -16,13 +16,18 @@ html, body {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* iOS Safari sometimes ignores overflow-x:hidden on body alone; setting
+     it on html too is the reliable belt-and-braces fix. */
+  overflow-x: hidden;
+  /* Prevents horizontal rubber-band scroll on iOS when content slightly
+     overflows. */
+  max-width: 100vw;
 }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background: radial-gradient(ellipse at top, #251612 0%, #1A1410 45%, #0A0705 100%);
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 ::selection {

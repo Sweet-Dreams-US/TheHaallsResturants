@@ -128,14 +128,17 @@ function OrderHero({ r, step, setStep }: { r: Restaurant; step: Step; setStep: (
           )}
         </div>
 
-        <div className="mt-8 flex items-center gap-2 text-sm">
+        {/* Progress steps. On mobile we hide non-active labels and shrink the
+            connectors so all 4 steps fit a 320px+ viewport. On sm+ all labels
+            show with full-width connectors. */}
+        <div className="mt-8 flex items-center gap-1.5 sm:gap-2 text-sm">
           {steps.map((s, i) => {
             const active = s.id === step;
             const done = steps.findIndex((x) => x.id === step) > i;
             return (
-              <div key={s.id} className="flex items-center gap-2">
+              <div key={s.id} className="flex items-center gap-1.5 sm:gap-2">
                 <span
-                  className={`h-7 w-7 grid place-items-center rounded-full font-mono text-xs ${
+                  className={`h-7 w-7 grid place-items-center rounded-full font-mono text-xs shrink-0 ${
                     active
                       ? 'bg-ember-600 text-cream-100'
                       : done
@@ -145,10 +148,16 @@ function OrderHero({ r, step, setStep }: { r: Restaurant; step: Step; setStep: (
                 >
                   {i + 1}
                 </span>
-                <span className={`font-mono text-[10px] uppercase tracking-widest ${active ? 'text-cream-100' : 'text-cream-100/50'}`}>
+                <span
+                  className={`font-mono text-[10px] uppercase tracking-widest whitespace-nowrap ${
+                    active ? 'text-cream-100' : 'text-cream-100/50 hidden sm:inline'
+                  }`}
+                >
                   {s.label}
                 </span>
-                {i < steps.length - 1 && <span className="w-8 h-px bg-cream-100/20" />}
+                {i < steps.length - 1 && (
+                  <span className="w-3 sm:w-8 h-px bg-cream-100/20 shrink-0" />
+                )}
               </div>
             );
           })}

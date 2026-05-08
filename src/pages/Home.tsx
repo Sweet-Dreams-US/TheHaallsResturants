@@ -151,6 +151,20 @@ function Ribbon() {
   );
 }
 
+/**
+ * Portfolio grid: 2 columns × 5 rows on every viewport.
+ *
+ * 10 restaurants only divide cleanly into 1, 2, 5, or 10 columns. We pick 2
+ * because it lets every card be huge (~50% of the container width) without
+ * needing horizontal scroll, hover affordances, or any UX users have to
+ * "discover." Vertical scroll is the universal browsing instinct — we lean
+ * into it and let the photography do the work.
+ *
+ * Aspect ratio is portrait (4/5) on mobile where card width is small and an
+ * editorial portrait reads as more deliberate, then switches to landscape
+ * (3/2) on tablet+ where the card is wide enough that portrait would be
+ * absurdly tall. Result: media is always the dominant visual element.
+ */
 function Portfolio() {
   return (
     <section className="relative py-24 lg:py-36">
@@ -158,7 +172,7 @@ function Portfolio() {
         <div className="max-w-3xl">
           <Reveal>
             <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400/80">
-              The Portfolio
+              The Portfolio · {restaurants.length} concepts
             </div>
           </Reveal>
           <Reveal delay={0.05}>
@@ -174,12 +188,9 @@ function Portfolio() {
           </Reveal>
         </div>
 
-        {/* 10 restaurants → 2 cols on mobile (5 rows of 2), 5 cols on desktop
-            (2 rows of 5). Grid sizes that divide evenly into 10 are 1, 2, 5, 10
-            — anything else creates an orphan card on the last row. */}
-        <div className="mt-16 grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+        <div className="mt-14 lg:mt-20 grid grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
           {restaurants.map((r, i) => (
-            <Reveal key={r.slug} delay={i * 0.04}>
+            <Reveal key={r.slug} delay={Math.min(i * 0.05, 0.4)}>
               <RestaurantCard r={r} />
             </Reveal>
           ))}
@@ -193,7 +204,7 @@ function RestaurantCard({ r }: { r: typeof restaurants[number] }) {
   return (
     <Link
       to={`/restaurants/${r.slug}`}
-      className="group relative block overflow-hidden rounded-2xl bg-ink-200 border border-cream-100/10 hover:border-cream-100/30 transition-colors aspect-[4/5]"
+      className="group relative block overflow-hidden rounded-2xl bg-ink-200 border border-cream-100/10 hover:border-cream-100/30 transition-colors aspect-[4/5] md:aspect-[3/2]"
     >
       <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105">
         <HeroImage slug={r.slug} fallbackAccent={r.accent} alt={r.name} />
@@ -206,40 +217,37 @@ function RestaurantCard({ r }: { r: typeof restaurants[number] }) {
         }}
       />
 
-      <div className="relative h-full p-4 lg:p-5 flex flex-col justify-between text-cream-100">
-        <div className="flex items-start justify-between gap-2">
+      <div className="relative h-full p-5 sm:p-6 lg:p-7 flex flex-col justify-between text-cream-100">
+        <div className="flex items-start justify-between gap-3">
           <span
-            className="font-mono text-[9px] lg:text-[10px] uppercase tracking-[0.22em] lg:tracking-[0.28em] px-2 py-0.5 lg:px-2.5 lg:py-1 rounded-full border border-cream-100/30 truncate"
+            className="font-mono text-[10px] uppercase tracking-[0.28em] px-2.5 py-1 rounded-full border border-cream-100/30"
             style={{ borderColor: `${r.accent}aa`, color: r.accent }}
           >
             {r.cuisine.split('·')[0].trim()}
           </span>
           {r.status === 'seasonal' && (
-            <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-cream-100/70 shrink-0">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cream-100/70 shrink-0">
               Seasonal
             </span>
           )}
           {r.status === 'refurbishing' && (
-            <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-cream-100/70 shrink-0">
-              2026
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cream-100/70 shrink-0">
+              Reopening 2026
             </span>
           )}
         </div>
-        <div className="min-w-0">
-          <h3 className="font-display text-xl sm:text-2xl lg:text-2xl xl:text-3xl leading-[1.05]">
+        <div>
+          <h3 className="font-display text-2xl sm:text-3xl lg:text-4xl leading-[1.05]">
             {r.name}
           </h3>
           <p
-            className="mt-1.5 font-script text-lg lg:text-xl xl:text-2xl text-cream-100/80 leading-tight"
+            className="mt-2 font-script text-xl sm:text-2xl text-cream-100/80 leading-tight"
             style={{ color: r.accent }}
           >
             {r.tagline}
           </p>
-          {/* Blurb: 2 lines on big mobile + xl, hidden in the dense 5-up grid */}
-          <div className="mt-2 text-xs sm:text-sm text-cream-100/70 line-clamp-2 hidden sm:block lg:hidden xl:block">
-            {r.blurb}
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] lg:text-xs text-cream-100/50 font-mono uppercase tracking-wider">
+          <div className="mt-3 text-sm text-cream-100/70 line-clamp-2">{r.blurb}</div>
+          <div className="mt-4 flex items-center gap-2 text-xs text-cream-100/50 font-mono uppercase tracking-wider">
             <span className="truncate">{r.address}</span>
             <span className="shrink-0">·</span>
             <span className="shrink-0 group-hover:text-gold-400 transition">View →</span>

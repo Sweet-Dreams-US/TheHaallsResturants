@@ -102,6 +102,18 @@ body {
   }
 }
 
+/* Hide native scrollbars on horizontal carousels — preserves touch/wheel
+   scroll behavior, just suppresses the visual scrollbar. */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

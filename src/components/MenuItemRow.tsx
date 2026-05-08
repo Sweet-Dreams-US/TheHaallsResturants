@@ -47,6 +47,9 @@ export default function MenuItemRow({
   const [justAdded, setJustAdded] = useState(false);
   const [selectedTier, setSelectedTier] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  // Image load state — when the deterministic URL 404s (item has no photo
+  // yet), we flip to 'error' and render the placeholder gracefully.
+  const [imgStatus, setImgStatus] = useState<'loading' | 'ok' | 'error'>('loading');
 
   const inCart = state.items.find((i) => i.id === item.id);
   const tier = item.priceTiers?.[selectedTier];
@@ -58,6 +61,17 @@ export default function MenuItemRow({
   // list (3+ items). Otherwise descriptions read as prose and look better
   // as a paragraph.
   const useIngredientsList = ingredients.length >= 3;
+
+  // Derive the image URL from the item id automatically.
+  // item.id is like 'the-tavern__tavern-onion-rings'; we want the part after
+  // the '__' as the filename. Items that have an explicit `image` field
+  // override this. The browser will request the URL only when the dropdown
+  // is opened (because the <img> only mounts when expanded === true), and
+  // if it 404s, onError fires and we swap to the placeholder. This means
+  // adding new menu photos requires no data-file changes — just drop the
+  // webp in public/menu-images/<slug>/<item-suffix>.webp.
+  const itemSuffix = item.id.includes('__') ? item.id.split('__').slice(1).join('__') : item.id;
+  const imageUrl = item.image ?? `${import.meta.env.BASE_URL}menu-images/${restaurantSlug}/${itemSuffix}.webp`;
 
   const handleAdd = () => {
     add({
@@ -196,21 +210,30 @@ export default function MenuItemRow({
             className="basis-full overflow-hidden"
           >
             <div className="pt-4 pb-2 grid grid-cols-1 sm:grid-cols-[2fr_3fr] gap-5">
-              {/* Photo (or graceful placeholder if not yet generated) */}
+              {/* Photo. The <img> always mounts but if its URL 404s the
+                  onError handler flips imgStatus to 'error' and we swap in
+                  the placeholder. Loading state shows the gradient too. */}
               <div
                 className="relative aspect-[4/3] rounded-xl overflow-hidden bg-ink-300/60 border border-cream-100/10"
-                style={{ background: item.image ? undefined : `linear-gradient(135deg, ${accent}22, ${accent}05)` }}
+                style={{
+                  background: `linear-gradient(135deg, ${accent}22, ${accent}05)`,
+                }}
               >
-                {item.image ? (
+                {imgStatus !== 'error' && (
                   <img
-                    src={item.image}
+                    src={imageUrl}
                     alt={item.name}
                     loading="lazy"
                     decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover"
+                    onLoad={() => setImgStatus('ok')}
+                    onError={() => setImgStatus('error')}
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                      imgStatus === 'ok' ? 'opacity-100' : 'opacity-0'
+                    }`}
                   />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
+                )}
+                {imgStatus !== 'ok' && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center pointer-events-none">
                     <div
                       className="font-display italic text-3xl"
                       style={{ color: accent }}
@@ -218,7 +241,7 @@ export default function MenuItemRow({
                       {item.name.split(' ')[0]}
                     </div>
                     <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-cream-100/40">
-                      Photo coming soon
+                      {imgStatus === 'error' ? 'Photo coming soon' : 'Loading…'}
                     </div>
                   </div>
                 )}

@@ -184,8 +184,13 @@ function FullMenu({ r, onCheckout }: { r: Restaurant; onCheckout: () => void }) 
 
   return (
     <section className="relative py-12 lg:py-20">
+      {/* min-w-0 on grid items is critical: grid children default to
+          min-width:auto which means the column expands to fit its widest
+          piece of content (long h3 titles, sticky chip nav with min-w-max,
+          etc.). Without min-w-0, a long restaurant section heading would
+          force the entire page wider than the viewport on mobile. */}
       <div className="mx-auto max-w-[1500px] px-6 lg:px-10 grid lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 min-w-0">
           <h2 className="font-display text-3xl lg:text-5xl text-cream-100">The Menu</h2>
           <p className="text-cream-100/65 mt-2">
             Tap "+ Add" on anything to drop it in the cart. Demo only — no charges processed.
@@ -201,7 +206,7 @@ function FullMenu({ r, onCheckout }: { r: Restaurant; onCheckout: () => void }) 
           </div>
         </div>
 
-        <aside className="lg:col-span-4 lg:sticky lg:top-28 lg:h-fit">
+        <aside className="lg:col-span-4 lg:sticky lg:top-28 lg:h-fit min-w-0">
           <CartPanel accent={r.accent} />
           {count === 0 && (
             <p className="mt-4 text-center text-sm text-cream-100/50">

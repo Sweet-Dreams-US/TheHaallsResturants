@@ -17,11 +17,11 @@ html, body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* iOS Safari sometimes ignores overflow-x:hidden on body alone; setting
-     it on html too is the reliable belt-and-braces fix. */
+     it on html too is the reliable belt-and-braces fix.
+     NOTE: removed max-width:100vw — it interfered with inner overflow-x
+     scroll containers (chip nav). The actual root-cause fix was adding
+     min-w-0 to the grid/flex items that were forcing the page wider. */
   overflow-x: hidden;
-  /* Prevents horizontal rubber-band scroll on iOS when content slightly
-     overflows. */
-  max-width: 100vw;
 }
 
 body {

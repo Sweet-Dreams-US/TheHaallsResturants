@@ -36,7 +36,12 @@ export default function MenuRenderer({
   };
 
   return (
-    <div>
+    // min-w-0 here means the renderer can't expand wider than its parent
+    // when child content (long h3 titles, sticky chip nav) tries to push
+    // it beyond. Without this, the menu section heading "Commissary
+    // Favorites · Breakfast" was forcing the page wider than the mobile
+    // viewport.
+    <div className="min-w-0">
       {showCategoryNav && menu.sections.length > 1 && (
         // Sticky horizontal-scroll category nav.
         // - touchAction: 'pan-x' tells iOS Safari "horizontal touch is mine"
@@ -88,7 +93,7 @@ export default function MenuRenderer({
             >
               <header className="mb-6">
                 <h3
-                  className="font-display text-3xl lg:text-4xl text-cream-100"
+                  className="font-display text-2xl sm:text-3xl lg:text-4xl text-cream-100 break-words"
                   style={{ borderBottom: `1px solid ${accent}33`, paddingBottom: '0.5rem' }}
                 >
                   {section.title}

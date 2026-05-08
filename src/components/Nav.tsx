@@ -165,7 +165,15 @@ export default function Nav() {
             exit={{ height: 0, opacity: 0 }}
             className="lg:hidden border-t border-cream-100/10 bg-ink-300/95 backdrop-blur-xl overflow-hidden"
           >
-            <div className="px-6 py-6 space-y-1">
+            {/* Inner scroll container.
+                The outer motion.div keeps overflow-hidden for the height
+                animation to work without content leaking. This inner div
+                handles scrolling once the nav is fully open — capped at
+                viewport-height-minus-navbar (5rem = the h-20 navbar) so the
+                menu never extends below the fold. dvh is used instead of vh
+                because iOS Safari's URL bar collapse/expand changes the
+                effective viewport; dvh tracks it dynamically. */}
+            <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain px-6 py-6 space-y-1">
               {primary.map((item) => (
                 <NavLink
                   key={item.to}
@@ -180,18 +188,38 @@ export default function Nav() {
                   {item.label}
                 </NavLink>
               ))}
-              <div className="pt-4 border-t border-cream-100/10 space-y-1">
+              {/* Order Online CTA — duplicated from the desktop top-right
+                  button since it's hidden on mobile (md:inline-flex). Keeps
+                  the primary action one tap away from anywhere in the menu. */}
+              <Link
+                to="/order"
+                className="flex items-center justify-center gap-2 mx-1 mt-2 rounded-full bg-ember-600 px-5 py-3 font-display text-xl text-cream-100"
+              >
+                Order Online
+                {count > 0 && (
+                  <span className="rounded-full bg-cream-100 px-2 py-0.5 text-xs font-bold text-ember-600">
+                    {count}
+                  </span>
+                )}
+              </Link>
+              <div className="pt-4 mt-2 border-t border-cream-100/10 space-y-1">
+                <div className="px-4 pb-1 font-mono text-[10px] uppercase tracking-[0.3em] text-gold-400/80">
+                  Restaurants
+                </div>
                 {restaurants.map((r) => (
                   <Link
                     key={r.slug}
                     to={`/restaurants/${r.slug}`}
-                    className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-cream-100/5"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-cream-100/5"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: r.accent }} />
-                    <span className="text-sm text-cream-100">{r.name}</span>
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r.accent }} />
+                    <span className="text-base text-cream-100">{r.name}</span>
                   </Link>
                 ))}
               </div>
+              {/* Bottom spacer so the last item isn't pinned right against
+                  the scroll container edge — gives breathing room. */}
+              <div className="h-4" aria-hidden />
             </div>
           </motion.div>
         )}

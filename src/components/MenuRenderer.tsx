@@ -38,15 +38,25 @@ export default function MenuRenderer({
   return (
     <div>
       {showCategoryNav && menu.sections.length > 1 && (
-        <div className="sticky top-20 z-30 -mx-2 mb-8 px-2 py-3 bg-ink-300/85 backdrop-blur-xl border-y border-cream-100/10 overflow-x-auto">
-          <div className="flex gap-2 min-w-max">
+        // Sticky horizontal-scroll category nav.
+        // - touchAction: 'pan-x' tells iOS Safari "horizontal touch is mine"
+        //   so it doesn't try to interpret swipes as page back/forward.
+        //   Without this, mobile users couldn't scroll the chips when the
+        //   page body had overflow-x: hidden (the safety-net set on html).
+        // - WebkitOverflowScrolling: 'touch' enables momentum on legacy iOS.
+        // - scrollbar-hide hides the visual scrollbar (utility in index.css).
+        <div
+          className="sticky top-20 z-30 -mx-2 mb-8 px-2 py-3 bg-ink-300/85 backdrop-blur-xl border-y border-cream-100/10 overflow-x-auto scrollbar-hide"
+          style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+        >
+          <div className="flex gap-2 w-max">
             {menu.sections.map((s) => {
               const active = s.title === activeSection;
               return (
                 <button
                   key={s.title}
                   onClick={() => scrollToSection(s.title)}
-                  className={`font-mono text-[10px] uppercase tracking-[0.18em] px-3.5 py-2 rounded-full border whitespace-nowrap transition ${
+                  className={`font-mono text-[10px] uppercase tracking-[0.18em] px-3.5 py-2 rounded-full border whitespace-nowrap transition shrink-0 ${
                     active
                       ? 'border-cream-100 text-cream-100 bg-cream-100/5'
                       : 'border-cream-100/15 text-cream-100/60 hover:text-cream-100 hover:border-cream-100/35'

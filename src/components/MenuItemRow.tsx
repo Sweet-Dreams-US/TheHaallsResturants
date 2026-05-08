@@ -50,7 +50,10 @@ export default function MenuItemRow({
       className={
         isCard
           ? 'group rounded-xl border border-cream-100/10 bg-ink-300/40 p-5 hover:border-cream-100/30 transition'
-          : 'group flex items-start gap-4 py-5 border-b border-cream-100/10'
+          : // Mobile: stack vertically so price+Add land below description
+            // (was getting clipped to the right of viewport on narrow screens).
+            // sm+: revert to horizontal flex with right-aligned price/CTA.
+            'group flex flex-col sm:flex-row sm:items-start sm:gap-4 py-5 border-b border-cream-100/10'
       }
     >
       <div className="flex-1 min-w-0">
@@ -91,7 +94,10 @@ export default function MenuItemRow({
         )}
       </div>
 
-      <div className="text-right shrink-0 flex flex-col items-end gap-2">
+      {/* Price + Add button.
+          - Mobile: full-width row below the description, price left, button right.
+          - sm+: right-aligned column matching original layout. */}
+      <div className="flex items-center justify-between gap-3 mt-3 sm:mt-0 sm:flex-col sm:items-end sm:justify-start sm:text-right sm:shrink-0 sm:w-auto">
         {!item.priceTiers || item.priceTiers.length <= 1 ? (
           <div className="font-display text-xl lg:text-2xl text-gold-400">${price}</div>
         ) : (
@@ -100,7 +106,7 @@ export default function MenuItemRow({
         {!disabled && price > 0 && (
           <button
             onClick={handleAdd}
-            className="relative rounded-full px-4 py-1.5 text-xs font-mono uppercase tracking-wider transition border border-cream-100/20 hover:border-cream-100/60 text-cream-100/70 hover:text-cream-100"
+            className="relative rounded-full px-4 py-2 sm:py-1.5 text-xs font-mono uppercase tracking-wider transition border border-cream-100/20 hover:border-cream-100/60 text-cream-100/70 hover:text-cream-100 active:scale-95"
           >
             <AnimatePresence mode="wait" initial={false}>
               {justAdded ? (

@@ -174,7 +174,10 @@ function Portfolio() {
           </Reveal>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        {/* 10 restaurants → 2 cols on mobile (5 rows of 2), 5 cols on desktop
+            (2 rows of 5). Grid sizes that divide evenly into 10 are 1, 2, 5, 10
+            — anything else creates an orphan card on the last row. */}
+        <div className="mt-16 grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
           {restaurants.map((r, i) => (
             <Reveal key={r.slug} delay={i * 0.04}>
               <RestaurantCard r={r} />
@@ -203,35 +206,43 @@ function RestaurantCard({ r }: { r: typeof restaurants[number] }) {
         }}
       />
 
-      <div className="relative h-full p-6 flex flex-col justify-between text-cream-100">
-        <div className="flex items-start justify-between">
+      <div className="relative h-full p-4 lg:p-5 flex flex-col justify-between text-cream-100">
+        <div className="flex items-start justify-between gap-2">
           <span
-            className="font-mono text-[10px] uppercase tracking-[0.28em] px-2.5 py-1 rounded-full border border-cream-100/30"
+            className="font-mono text-[9px] lg:text-[10px] uppercase tracking-[0.22em] lg:tracking-[0.28em] px-2 py-0.5 lg:px-2.5 lg:py-1 rounded-full border border-cream-100/30 truncate"
             style={{ borderColor: `${r.accent}aa`, color: r.accent }}
           >
             {r.cuisine.split('·')[0].trim()}
           </span>
           {r.status === 'seasonal' && (
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cream-100/70">
+            <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-cream-100/70 shrink-0">
               Seasonal
             </span>
           )}
           {r.status === 'refurbishing' && (
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cream-100/70">
-              Reopening 2026
+            <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-cream-100/70 shrink-0">
+              2026
             </span>
           )}
         </div>
-        <div>
-          <h3 className="font-display text-3xl lg:text-4xl leading-tight">{r.name}</h3>
-          <p className="mt-2 font-script text-2xl text-cream-100/80" style={{ color: r.accent }}>
+        <div className="min-w-0">
+          <h3 className="font-display text-xl sm:text-2xl lg:text-2xl xl:text-3xl leading-[1.05]">
+            {r.name}
+          </h3>
+          <p
+            className="mt-1.5 font-script text-lg lg:text-xl xl:text-2xl text-cream-100/80 leading-tight"
+            style={{ color: r.accent }}
+          >
             {r.tagline}
           </p>
-          <div className="mt-3 text-sm text-cream-100/70 line-clamp-2">{r.blurb}</div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-cream-100/50 font-mono uppercase tracking-wider">
-            {r.address}
-            <span>·</span>
-            <span className="group-hover:text-gold-400 transition">View →</span>
+          {/* Blurb: 2 lines on big mobile + xl, hidden in the dense 5-up grid */}
+          <div className="mt-2 text-xs sm:text-sm text-cream-100/70 line-clamp-2 hidden sm:block lg:hidden xl:block">
+            {r.blurb}
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 text-[10px] lg:text-xs text-cream-100/50 font-mono uppercase tracking-wider">
+            <span className="truncate">{r.address}</span>
+            <span className="shrink-0">·</span>
+            <span className="shrink-0 group-hover:text-gold-400 transition">View →</span>
           </div>
         </div>
       </div>

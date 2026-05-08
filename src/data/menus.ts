@@ -9,6 +9,12 @@ export type MenuItem = {
   priceTiers?: { label: string; price: number }[];
   options?: { label: string; price?: number }[];
   tags?: string[];
+  /** Path to a food photograph for this item (optional). Shown inside the
+   * collapsible details dropdown. Generated via Higgsfield. */
+  image?: string;
+  /** Optional explicit ingredients list. If absent, the description is split
+   * on commas to derive one for the dropdown view. */
+  ingredients?: string[];
 };
 
 export type MenuSection = {

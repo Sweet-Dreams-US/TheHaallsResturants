@@ -92,7 +92,12 @@ export default function MenuItemRow({
       className={
         isCard
           ? 'group rounded-xl border border-cream-100/10 bg-ink-300/40 p-5 hover:border-cream-100/30 transition'
-          : 'group flex flex-col sm:flex-row sm:items-start sm:gap-4 py-5 border-b border-cream-100/10'
+          : // When expanded on desktop, span the full row so the photo +
+            // ingredients dropdown has the whole grid width to breathe.
+            // Mobile is unaffected since the grid is single-column there.
+            `group flex flex-col sm:flex-row sm:items-start sm:gap-4 py-5 border-b border-cream-100/10 ${
+              expanded ? 'md:col-span-2' : ''
+            }`
       }
     >
       <div className="flex-1 min-w-0">
@@ -209,7 +214,12 @@ export default function MenuItemRow({
             transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             className="basis-full overflow-hidden"
           >
-            <div className="pt-4 pb-2 grid grid-cols-1 sm:grid-cols-[2fr_3fr] gap-5">
+            {/* Inner expanded layout. When item spans the full row on desktop
+                (md:col-span-2), the image column gets capped at 480px so the
+                photo doesn't go absurdly wide, and the ingredients column gets
+                a comfortable readable max-width. On mobile/tablet sm:, fall
+                back to a 2fr/3fr fluid split. */}
+            <div className="pt-4 pb-2 grid grid-cols-1 sm:grid-cols-[2fr_3fr] md:grid-cols-[minmax(280px,480px)_minmax(0,1fr)] gap-5 md:gap-8">
               {/* Photo. The <img> always mounts but if its URL 404s the
                   onError handler flips imgStatus to 'error' and we swap in
                   the placeholder. Loading state shows the gradient too. */}

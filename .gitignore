@@ -1,0 +1,20 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+.env
+.env.*
+!.env.example
+.playwright-mcp
+
+# Unrelated nested project that landed in this folder
+DeerParkIrishPub/
+
+# Drop-zone for real reference photos (private, not deployed)
+reference-media/*
+!reference-media/README.md
+!reference-media/.gitkeep

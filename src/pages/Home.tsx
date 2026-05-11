@@ -28,7 +28,7 @@ function Hero() {
   const scale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
 
   return (
-    <section ref={ref} className="relative h-[100svh] min-h-[680px] overflow-hidden">
+    <section ref={ref} className="relative h-[100svh] min-h-[560px] overflow-hidden">
       {/* layered hero — gas house tones with crossfaded restaurant moods */}
       <motion.div style={{ y, scale }} className="absolute inset-0">
         <HeroImage
@@ -43,7 +43,7 @@ function Hero() {
       <div className="absolute inset-0 bg-gradient-to-b from-ink-300/60 via-ink-300/30 to-ink-300" />
       <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_30%,transparent,rgba(10,7,5,0.7))]" />
 
-      <motion.div style={{ opacity }} className="relative z-10 flex h-full items-end pb-20 lg:pb-28">
+      <motion.div style={{ opacity }} className="relative z-10 flex h-full items-end pb-12 sm:pb-16 lg:pb-24 pt-24">
         <div className="mx-auto max-w-[1500px] px-6 lg:px-10 w-full">
           <div className="max-w-4xl">
             <motion.div
@@ -56,7 +56,12 @@ function Hero() {
               Don Hall's Restaurants · Since 1946
             </motion.div>
 
-            <h1 className="font-display text-[clamp(3rem,9vw,9rem)] leading-[0.95] tracking-tight text-cream-100 mt-4">
+            {/* Font size is constrained by BOTH viewport width (9vw) and
+                viewport height (12vh) so the 3-line headline never grows
+                taller than the available hero. Without the vh cap, short
+                laptop screens (e.g. 1440×900) had the heading overflow up
+                into the fixed navbar. */}
+            <h1 className="font-display text-[clamp(2.25rem,min(8.5vw,11.5vh),7.5rem)] leading-[0.95] tracking-tight text-cream-100 mt-3 sm:mt-4">
               <SplitLine delay={0.15}>Ten kitchens.</SplitLine>
               <SplitLine delay={0.3}>One family.</SplitLine>
               <SplitLine delay={0.45}>
@@ -68,7 +73,7 @@ function Hero() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.7 }}
-              className="mt-8 max-w-xl text-lg leading-relaxed text-cream-100/80"
+              className="mt-4 sm:mt-6 lg:mt-8 max-w-xl text-base sm:text-lg leading-relaxed text-cream-100/80"
             >
               From a 1946 drive-in on Bluffton Road to ten distinct restaurants across the city —
               the Hall family has been serving Fort Wayne dinner for three generations.
@@ -78,7 +83,7 @@ function Hero() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.85 }}
-              className="mt-10 flex flex-wrap items-center gap-4"
+              className="mt-6 sm:mt-8 lg:mt-10 flex flex-wrap items-center gap-3 sm:gap-4"
             >
               <Link to="/restaurants" className="btn-primary">
                 Explore the Restaurants
@@ -176,7 +181,7 @@ function Portfolio() {
             </div>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2 className="font-display text-[clamp(2.5rem,6vw,5rem)] leading-[1] mt-4 text-cream-100">
+            <h2 className="font-display text-[clamp(2rem,5.5vw,4.5rem)] leading-[1.02] mt-4 text-cream-100">
               Ten different rooms in <span className="italic font-normal text-gold-400">one family's house.</span>
             </h2>
           </Reveal>
@@ -267,7 +272,7 @@ function StoryTeaser() {
             <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-400/80">
               The Hall Family
             </div>
-            <h2 className="font-display text-[clamp(2.25rem,5vw,4.5rem)] leading-[1] text-cream-100">
+            <h2 className="font-display text-[clamp(2rem,4.5vw,4rem)] leading-[1.02] text-cream-100">
               "Forty acres of swamp land, <span className="italic font-normal text-gold-400">and a dream.</span>"
             </h2>
             <p className="text-lg leading-relaxed text-cream-100/75 max-w-xl">
@@ -349,7 +354,7 @@ function Closer() {
           </div>
         </Reveal>
         <Reveal delay={0.05}>
-          <h2 className="font-display text-[clamp(2.5rem,7vw,6rem)] leading-[1] mt-4 text-cream-100 max-w-4xl mx-auto">
+          <h2 className="font-display text-[clamp(2rem,6vw,5rem)] leading-[1.02] mt-4 text-cream-100 max-w-4xl mx-auto">
             Pick a kitchen. <span className="italic text-gold-400">We'll have the booth ready.</span>
           </h2>
         </Reveal>

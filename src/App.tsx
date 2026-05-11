@@ -11,6 +11,7 @@ import Specials from './pages/Specials';
 import GiftCards from './pages/GiftCards';
 import Jobs from './pages/Jobs';
 import Contact from './pages/Contact';
+import Admin from './pages/Admin';
 import { useEffect } from 'react';
 
 function ScrollToTop() {
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/gift-cards" element={<GiftCards />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </AnimatePresence>

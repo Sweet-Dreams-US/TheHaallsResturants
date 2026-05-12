@@ -10,6 +10,7 @@ type SectionKey =
   | 'accounting'
   | 'events'
   | 'staff'
+  | 'scheduling'
   | 'settings';
 
 type Scope = 'all' | string; // 'all' or restaurant slug
@@ -21,6 +22,7 @@ const navItems: { key: SectionKey; icon: string; label: string }[] = [
   { key: 'accounting', icon: '💰', label: 'Accounting' },
   { key: 'events', icon: '🌸', label: 'Events' },
   { key: 'staff', icon: '🪪', label: 'Staff' },
+  { key: 'scheduling', icon: '📅', label: 'Scheduling' },
   { key: 'settings', icon: '⚙', label: 'Settings' },
 ];
 
@@ -203,6 +205,9 @@ export default function Admin() {
     [scope]
   );
   const liveOrderCount = scopedOrders.filter((o) => o.status !== 'Completed').length;
+  const pendingScheduleCount =
+    initialSwaps.filter((s) => s.status === 'pending').length +
+    initialTimeOff.filter((t) => t.status === 'pending').length;
 
   return (
     <div className="fixed inset-0 z-[60] flex bg-ink-500 text-cream-100">
@@ -221,6 +226,7 @@ export default function Admin() {
                 setSidebarOpen(false);
               }}
               liveOrderCount={liveOrderCount}
+              pendingScheduleCount={pendingScheduleCount}
             />
           </aside>
         )}
@@ -250,6 +256,7 @@ export default function Admin() {
             {section === 'accounting' && <AccountingView scope={scope} />}
             {section === 'events' && <EventsView scope={scope} />}
             {section === 'staff' && <StaffView scope={scope} />}
+            {section === 'scheduling' && <SchedulingView scope={scope} />}
             {section === 'settings' && <SettingsView scope={scope} setScope={setScope} />}
           </div>
         </main>
@@ -266,10 +273,12 @@ function Sidebar({
   section,
   setSection,
   liveOrderCount,
+  pendingScheduleCount,
 }: {
   section: SectionKey;
   setSection: (s: SectionKey) => void;
   liveOrderCount: number;
+  pendingScheduleCount: number;
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -290,7 +299,12 @@ function Sidebar({
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {navItems.map((item) => {
           const active = section === item.key;
-          const badge = item.key === 'orders' && liveOrderCount > 0 ? liveOrderCount : null;
+          const badge =
+            item.key === 'orders' && liveOrderCount > 0
+              ? liveOrderCount
+              : item.key === 'scheduling' && pendingScheduleCount > 0
+              ? pendingScheduleCount
+              : null;
           return (
             <button
               key={item.key}
@@ -1092,6 +1106,919 @@ function StaffView({ scope }: { scope: Scope }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// SCHEDULING
+// In-house replacement for 7shifts/HotSchedules — manager grid +
+// per-employee portal in a single section. Toggle between roles at
+// the top. Demo state is in-memory only.
+// ──────────────────────────────────────────────────────────────────────
+
+type Shift = {
+  id: string;
+  employeeId: number;
+  restaurantSlug: string;
+  date: string; // YYYY-MM-DD
+  start: string; // HH:MM 24h
+  end: string;
+  role: string;
+  status: 'scheduled' | 'open' | 'swap-pending' | 'pickup-pending';
+  note?: string;
+};
+
+type SwapRequest = {
+  id: string;
+  shiftId: string;
+  requesterId: number;
+  reason: string;
+  postedAt: string;
+  status: 'pending' | 'approved' | 'denied';
+  interestedIds: number[];
+};
+
+type TimeOff = {
+  id: string;
+  employeeId: number;
+  start: string;
+  end: string;
+  type: 'PTO' | 'Sick' | 'Unpaid' | 'Bereavement';
+  reason: string;
+  status: 'pending' | 'approved' | 'denied';
+};
+
+// Current week anchor — Mon May 11 2026 → Sun May 17 2026.
+const WEEK_START = '2026-05-11';
+const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEK_DATES = ['2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15', '2026-05-16', '2026-05-17'];
+
+// Helpers
+const minutesOf = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+const hoursBetween = (start: string, end: string) => (minutesOf(end) - minutesOf(start)) / 60;
+const formatTime = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  const period = h >= 12 ? 'p' : 'a';
+  const hr = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${hr}${period}` : `${hr}:${String(m).padStart(2, '0')}${period}`;
+};
+
+const initialShifts: Shift[] = [
+  // Marcus Reed · Exec Chef · Gas House
+  { id: 's1',  employeeId: 1, restaurantSlug: 'the-gas-house', date: '2026-05-11', start: '16:00', end: '00:00', role: 'Executive Chef', status: 'scheduled' },
+  { id: 's2',  employeeId: 1, restaurantSlug: 'the-gas-house', date: '2026-05-12', start: '16:00', end: '00:00', role: 'Executive Chef', status: 'scheduled' },
+  { id: 's3',  employeeId: 1, restaurantSlug: 'the-gas-house', date: '2026-05-14', start: '15:00', end: '23:00', role: 'Executive Chef', status: 'scheduled' },
+  { id: 's4',  employeeId: 1, restaurantSlug: 'the-gas-house', date: '2026-05-15', start: '15:00', end: '23:00', role: 'Executive Chef', status: 'scheduled' },
+  { id: 's5',  employeeId: 1, restaurantSlug: 'the-gas-house', date: '2026-05-16', start: '15:00', end: '23:00', role: 'Executive Chef', status: 'scheduled' },
+  // Linda Park · GM · Gas House
+  { id: 's6',  employeeId: 2, restaurantSlug: 'the-gas-house', date: '2026-05-12', start: '15:00', end: '23:00', role: 'GM', status: 'scheduled' },
+  { id: 's7',  employeeId: 2, restaurantSlug: 'the-gas-house', date: '2026-05-13', start: '15:00', end: '23:00', role: 'GM', status: 'scheduled' },
+  { id: 's8',  employeeId: 2, restaurantSlug: 'the-gas-house', date: '2026-05-15', start: '15:00', end: '23:00', role: 'GM', status: 'scheduled' },
+  { id: 's9',  employeeId: 2, restaurantSlug: 'the-gas-house', date: '2026-05-17', start: '11:00', end: '21:00', role: 'GM', status: 'scheduled' },
+  // Devon Hartwell · Sous Chef · Tavern (has a swap pending Friday)
+  { id: 's10', employeeId: 3, restaurantSlug: 'the-tavern',    date: '2026-05-12', start: '14:00', end: '22:00', role: 'Sous Chef', status: 'scheduled' },
+  { id: 's11', employeeId: 3, restaurantSlug: 'the-tavern',    date: '2026-05-13', start: '14:00', end: '22:00', role: 'Sous Chef', status: 'scheduled' },
+  { id: 's12', employeeId: 3, restaurantSlug: 'the-tavern',    date: '2026-05-15', start: '14:00', end: '22:00', role: 'Sous Chef', status: 'swap-pending', note: 'Doctor appt — looking for cover' },
+  { id: 's13', employeeId: 3, restaurantSlug: 'the-tavern',    date: '2026-05-16', start: '14:00', end: '22:00', role: 'Sous Chef', status: 'scheduled' },
+  // Ana Velasquez · Bar Mgr · Tavern
+  { id: 's14', employeeId: 4, restaurantSlug: 'the-tavern',    date: '2026-05-13', start: '16:00', end: '00:00', role: 'Bar Manager', status: 'scheduled' },
+  { id: 's15', employeeId: 4, restaurantSlug: 'the-tavern',    date: '2026-05-14', start: '16:00', end: '00:00', role: 'Bar Manager', status: 'scheduled' },
+  { id: 's16', employeeId: 4, restaurantSlug: 'the-tavern',    date: '2026-05-16', start: '16:00', end: '00:00', role: 'Bar Manager', status: 'scheduled' },
+  // Roy Tanaka · Hibachi Lead · Takaoka
+  { id: 's17', employeeId: 5, restaurantSlug: 'takaoka-of-japan', date: '2026-05-12', start: '16:00', end: '23:00', role: 'Hibachi Lead', status: 'scheduled' },
+  { id: 's18', employeeId: 5, restaurantSlug: 'takaoka-of-japan', date: '2026-05-14', start: '16:00', end: '23:00', role: 'Hibachi Lead', status: 'scheduled' },
+  { id: 's19', employeeId: 5, restaurantSlug: 'takaoka-of-japan', date: '2026-05-15', start: '16:00', end: '23:00', role: 'Hibachi Lead', status: 'scheduled' },
+  { id: 's20', employeeId: 5, restaurantSlug: 'takaoka-of-japan', date: '2026-05-16', start: '16:00', end: '23:00', role: 'Hibachi Lead', status: 'scheduled' },
+  // Marie Bouchard · Pastry · Factory
+  { id: 's21', employeeId: 6, restaurantSlug: 'the-factory',   date: '2026-05-12', start: '06:00', end: '14:00', role: 'Pastry Chef', status: 'scheduled' },
+  { id: 's22', employeeId: 6, restaurantSlug: 'the-factory',   date: '2026-05-13', start: '06:00', end: '14:00', role: 'Pastry Chef', status: 'scheduled' },
+  { id: 's23', employeeId: 6, restaurantSlug: 'the-factory',   date: '2026-05-14', start: '06:00', end: '14:00', role: 'Pastry Chef', status: 'scheduled' },
+  { id: 's24', employeeId: 6, restaurantSlug: 'the-factory',   date: '2026-05-15', start: '06:00', end: '14:00', role: 'Pastry Chef', status: 'scheduled' },
+  // Jordan Wells · GM · Hollywood
+  { id: 's25', employeeId: 7, restaurantSlug: 'halls-hollywood', date: '2026-05-12', start: '11:00', end: '21:00', role: 'GM', status: 'scheduled' },
+  { id: 's26', employeeId: 7, restaurantSlug: 'halls-hollywood', date: '2026-05-13', start: '11:00', end: '21:00', role: 'GM', status: 'scheduled' },
+  { id: 's27', employeeId: 7, restaurantSlug: 'halls-hollywood', date: '2026-05-14', start: '11:00', end: '21:00', role: 'GM', status: 'scheduled' },
+  { id: 's28', employeeId: 7, restaurantSlug: 'halls-hollywood', date: '2026-05-16', start: '11:00', end: '21:00', role: 'GM', status: 'scheduled' },
+  // Open shifts that need pickup
+  { id: 's29', employeeId: 0, restaurantSlug: 'halls-hollywood', date: '2026-05-15', start: '11:00', end: '17:00', role: 'Server', status: 'open' },
+  { id: 's30', employeeId: 0, restaurantSlug: 'the-deck',       date: '2026-05-16', start: '17:00', end: '23:00', role: 'Server', status: 'open' },
+  { id: 's31', employeeId: 0, restaurantSlug: 'tap-haus',       date: '2026-05-17', start: '15:00', end: '22:00', role: 'Bartender', status: 'open' },
+  // Sofia · Patio Lead · Deck
+  { id: 's32', employeeId: 10, restaurantSlug: 'the-deck',      date: '2026-05-13', start: '12:00', end: '22:00', role: 'Patio Lead', status: 'scheduled' },
+  { id: 's33', employeeId: 10, restaurantSlug: 'the-deck',      date: '2026-05-14', start: '12:00', end: '22:00', role: 'Patio Lead', status: 'scheduled' },
+  { id: 's34', employeeId: 10, restaurantSlug: 'the-deck',      date: '2026-05-15', start: '12:00', end: '22:00', role: 'Patio Lead', status: 'scheduled' },
+  { id: 's35', employeeId: 10, restaurantSlug: 'the-deck',      date: '2026-05-16', start: '12:00', end: '22:00', role: 'Patio Lead', status: 'scheduled' },
+];
+
+const initialSwaps: SwapRequest[] = [
+  {
+    id: 'sw1',
+    shiftId: 's12',
+    requesterId: 3,
+    reason: 'Doctor appointment — need cover Friday',
+    postedAt: '2 hours ago',
+    status: 'pending',
+    interestedIds: [4],
+  },
+  {
+    id: 'sw2',
+    shiftId: 's25',
+    requesterId: 7,
+    reason: 'Kid\'s recital, would prefer to swap with Saturday',
+    postedAt: 'Yesterday',
+    status: 'pending',
+    interestedIds: [],
+  },
+];
+
+const initialTimeOff: TimeOff[] = [
+  {
+    id: 'to1',
+    employeeId: 8,
+    start: '2026-05-22',
+    end: '2026-05-26',
+    type: 'PTO',
+    reason: 'Family wedding in Chicago',
+    status: 'pending',
+  },
+  {
+    id: 'to2',
+    employeeId: 11,
+    start: '2026-05-18',
+    end: '2026-05-18',
+    type: 'Sick',
+    reason: 'Flu — already saw the doc',
+    status: 'pending',
+  },
+  {
+    id: 'to3',
+    employeeId: 2,
+    start: '2026-06-15',
+    end: '2026-06-22',
+    type: 'PTO',
+    reason: 'Pre-approved annual vacation',
+    status: 'approved',
+  },
+];
+
+function SchedulingView({ scope }: { scope: Scope }) {
+  const [mode, setMode] = useState<'manager' | 'employee'>('manager');
+  const [shifts, setShifts] = useState<Shift[]>(initialShifts);
+  const [swaps, setSwaps] = useState<SwapRequest[]>(initialSwaps);
+  const [timeOff, setTimeOff] = useState<TimeOff[]>(initialTimeOff);
+  // Employee mode acts-as picker — defaults to Linda Park (GM, id 2)
+  const [actingAs, setActingAs] = useState<number>(2);
+
+  const visibleEmployees = useMemo(
+    () => (scope === 'all' ? staff : staff.filter((s) => s.restaurant === scope)),
+    [scope]
+  );
+  const visibleShifts = useMemo(
+    () => (scope === 'all' ? shifts : shifts.filter((s) => s.restaurantSlug === scope)),
+    [shifts, scope]
+  );
+
+  return (
+    <div className="space-y-5">
+      {/* Mode switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-full border border-cream-100/15 bg-ink-400/60 p-1">
+          {(['manager', 'employee'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                mode === m
+                  ? 'bg-gold-400 text-ink-500'
+                  : 'text-cream-100/70 hover:text-cream-100'
+              }`}
+            >
+              {m === 'manager' ? 'Manager view' : 'Employee view'}
+            </button>
+          ))}
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-cream-100/50">
+          Week of May 11 — 17, 2026
+        </div>
+      </div>
+
+      {mode === 'manager' ? (
+        <ManagerScheduling
+          scope={scope}
+          shifts={visibleShifts}
+          employees={visibleEmployees}
+          allShifts={shifts}
+          setShifts={setShifts}
+          swaps={swaps}
+          setSwaps={setSwaps}
+          timeOff={timeOff}
+          setTimeOff={setTimeOff}
+        />
+      ) : (
+        <EmployeeScheduling
+          actingAs={actingAs}
+          setActingAs={setActingAs}
+          shifts={shifts}
+          setShifts={setShifts}
+          swaps={swaps}
+          setSwaps={setSwaps}
+          timeOff={timeOff}
+          setTimeOff={setTimeOff}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Manager view ──────────────────────────────────────────────────────
+
+function ManagerScheduling({
+  scope,
+  shifts,
+  employees,
+  allShifts,
+  setShifts,
+  swaps,
+  setSwaps,
+  timeOff,
+  setTimeOff,
+}: {
+  scope: Scope;
+  shifts: Shift[];
+  employees: typeof staff;
+  allShifts: Shift[];
+  setShifts: React.Dispatch<React.SetStateAction<Shift[]>>;
+  swaps: SwapRequest[];
+  setSwaps: React.Dispatch<React.SetStateAction<SwapRequest[]>>;
+  timeOff: TimeOff[];
+  setTimeOff: React.Dispatch<React.SetStateAction<TimeOff[]>>;
+}) {
+  const [published, setPublished] = useState(false);
+
+  const totalHours = shifts
+    .filter((s) => s.status !== 'open')
+    .reduce((sum, s) => sum + hoursBetween(s.start, s.end), 0);
+  const openShifts = shifts.filter((s) => s.status === 'open').length;
+  const pendingSwaps = swaps.filter((s) => s.status === 'pending').length;
+  const pendingTimeOff = timeOff.filter((t) => t.status === 'pending').length;
+  const laborCost = Math.round(totalHours * 24.5); // mock blended rate $24.50/hr
+
+  return (
+    <div className="space-y-5">
+      <KpiRow
+        items={[
+          { label: 'Scheduled hours', value: `${totalHours.toFixed(0)}h`, hint: `~$${laborCost.toLocaleString()} labor` },
+          { label: 'Open shifts', value: openShifts, hint: openShifts ? 'Need coverage' : 'Fully staffed' },
+          { label: 'Swap requests', value: pendingSwaps, hint: 'Awaiting approval' },
+          { label: 'Time-off pending', value: pendingTimeOff, hint: 'Awaiting approval' },
+        ]}
+      />
+
+      {/* Action bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cream-100/10 bg-ink-400/60 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <button className="rounded-full border border-cream-100/15 px-3 py-1.5 text-xs hover:border-cream-100/40 transition">
+            ← Prev week
+          </button>
+          <button className="rounded-full border border-cream-100/15 px-3 py-1.5 text-xs hover:border-cream-100/40 transition">
+            Today
+          </button>
+          <button className="rounded-full border border-cream-100/15 px-3 py-1.5 text-xs hover:border-cream-100/40 transition">
+            Next week →
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="rounded-full border border-cream-100/15 px-3 py-1.5 text-xs hover:border-cream-100/40 transition">
+            Copy from last week
+          </button>
+          <button className="rounded-full border border-cream-100/15 px-3 py-1.5 text-xs hover:border-cream-100/40 transition">
+            Auto-fill open shifts
+          </button>
+          <button
+            onClick={() => setPublished((p) => !p)}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              published
+                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30'
+                : 'bg-gold-400 text-ink-500 hover:bg-gold-300'
+            }`}
+          >
+            {published ? '● Published' : 'Publish schedule'}
+          </button>
+        </div>
+      </div>
+
+      {/* Week grid */}
+      <div className="rounded-xl border border-cream-100/10 bg-ink-400/60 overflow-hidden">
+        <div className="overflow-x-auto">
+          <div className="min-w-[1000px]">
+            {/* Header row */}
+            <div className="grid grid-cols-[200px_repeat(7,minmax(0,1fr))] border-b border-cream-100/10 bg-ink-500/40">
+              <div className="px-4 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-cream-100/50">
+                Employee
+              </div>
+              {WEEK_DAYS.map((d, i) => (
+                <div
+                  key={d}
+                  className={`px-3 py-3 text-center font-mono text-[10px] uppercase tracking-[0.2em] ${
+                    WEEK_DATES[i] === '2026-05-12' ? 'text-gold-400' : 'text-cream-100/50'
+                  }`}
+                >
+                  <div>{d}</div>
+                  <div className="text-cream-100/40 text-[9px] mt-0.5 normal-case tracking-normal">
+                    {WEEK_DATES[i].slice(-2)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Employee rows */}
+            {employees.map((emp) => {
+              const r = restaurants.find((x) => x.slug === emp.restaurant);
+              const empShifts = shifts.filter((s) => s.employeeId === emp.id);
+              const weekTotal = empShifts.reduce((sum, s) => sum + hoursBetween(s.start, s.end), 0);
+              const initials = emp.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
+
+              return (
+                <div
+                  key={emp.id}
+                  className="grid grid-cols-[200px_repeat(7,minmax(0,1fr))] border-b border-cream-100/5 last:border-0 hover:bg-cream-100/[0.02] transition"
+                >
+                  <div className="px-3 py-3 flex items-center gap-2.5 border-r border-cream-100/5">
+                    <div
+                      className="h-7 w-7 rounded-full grid place-items-center text-[10px] font-semibold text-ink-500 shrink-0"
+                      style={{ background: r?.accent ?? '#D4A24C' }}
+                    >
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs text-cream-100 truncate">{emp.name}</div>
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-cream-100/45 truncate">
+                        {emp.role} · {weekTotal.toFixed(0)}h
+                      </div>
+                    </div>
+                  </div>
+                  {WEEK_DATES.map((date) => {
+                    const shift = empShifts.find((s) => s.date === date);
+                    return (
+                      <div
+                        key={date}
+                        className="px-1.5 py-1.5 border-r border-cream-100/5 last:border-0 min-h-[60px]"
+                      >
+                        {shift ? (
+                          <ShiftBlock shift={shift} accent={r?.accent ?? '#D4A24C'} />
+                        ) : (
+                          <button className="w-full h-full rounded-md border border-dashed border-cream-100/10 text-cream-100/30 text-[10px] hover:border-gold-400/40 hover:text-gold-400/70 transition opacity-0 hover:opacity-100">
+                            + add
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+
+            {/* Open shifts row */}
+            {shifts.some((s) => s.status === 'open') && (
+              <div className="grid grid-cols-[200px_repeat(7,minmax(0,1fr))] border-t-2 border-gold-400/30 bg-gold-400/[0.03]">
+                <div className="px-3 py-3 flex items-center gap-2.5 border-r border-cream-100/5">
+                  <div className="h-7 w-7 rounded-full bg-gold-400/20 border border-gold-400/40 grid place-items-center text-[10px] font-semibold text-gold-400 shrink-0">
+                    ?
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs text-gold-400 font-medium">Open shifts</div>
+                    <div className="text-[9px] font-mono uppercase tracking-wider text-cream-100/45">
+                      Available to pick up
+                    </div>
+                  </div>
+                </div>
+                {WEEK_DATES.map((date) => {
+                  const open = shifts.filter((s) => s.status === 'open' && s.date === date);
+                  return (
+                    <div key={date} className="px-1.5 py-1.5 border-r border-cream-100/5 last:border-0 min-h-[60px] space-y-1">
+                      {open.map((s) => {
+                        const r = restaurants.find((x) => x.slug === s.restaurantSlug);
+                        return <ShiftBlock key={s.id} shift={s} accent={r?.accent ?? '#D4A24C'} />;
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Requests panels */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RequestsPanel
+          title="Shift swap requests"
+          empty="No pending swap requests."
+          items={swaps.filter((s) => s.status === 'pending').map((swap) => {
+            const shift = allShifts.find((x) => x.id === swap.shiftId);
+            const emp = staff.find((s) => s.id === swap.requesterId);
+            const r = shift && restaurants.find((x) => x.slug === shift.restaurantSlug);
+            return {
+              id: swap.id,
+              line1: `${emp?.name} · ${shift?.date} · ${shift && formatTime(shift.start)}–${shift && formatTime(shift.end)}`,
+              line2: `${r?.shortName} · ${swap.reason}`,
+              footer: `Posted ${swap.postedAt} · ${swap.interestedIds.length} interested`,
+              accent: r?.accent ?? '#D4A24C',
+              onApprove: () =>
+                setSwaps((arr) => arr.map((s) => (s.id === swap.id ? { ...s, status: 'approved' } : s))),
+              onDeny: () =>
+                setSwaps((arr) => arr.map((s) => (s.id === swap.id ? { ...s, status: 'denied' } : s))),
+            };
+          })}
+        />
+        <RequestsPanel
+          title="Time-off requests"
+          empty="No pending time-off requests."
+          items={timeOff.filter((t) => t.status === 'pending').map((req) => {
+            const emp = staff.find((s) => s.id === req.employeeId);
+            const r = emp && restaurants.find((x) => x.slug === emp.restaurant);
+            return {
+              id: req.id,
+              line1: `${emp?.name} · ${req.start === req.end ? req.start : `${req.start} → ${req.end}`}`,
+              line2: `${req.type} · ${req.reason}`,
+              footer: `${emp?.role} · ${r?.shortName}`,
+              accent: r?.accent ?? '#D4A24C',
+              onApprove: () =>
+                setTimeOff((arr) => arr.map((t) => (t.id === req.id ? { ...t, status: 'approved' } : t))),
+              onDeny: () =>
+                setTimeOff((arr) => arr.map((t) => (t.id === req.id ? { ...t, status: 'denied' } : t))),
+            };
+          })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ShiftBlock({ shift, accent }: { shift: Shift; accent: string }) {
+  const isOpen = shift.status === 'open';
+  const isSwap = shift.status === 'swap-pending';
+  return (
+    <div
+      className="group relative rounded-md px-2 py-1.5 text-left text-[10px] cursor-pointer transition"
+      style={{
+        background: isOpen
+          ? 'rgba(212,162,76,0.12)'
+          : isSwap
+          ? 'rgba(123,15,26,0.18)'
+          : `${accent}1f`,
+        border: `1px solid ${isOpen ? 'rgba(212,162,76,0.4)' : isSwap ? 'rgba(212,162,76,0.4)' : `${accent}55`}`,
+      }}
+    >
+      <div className="font-mono text-cream-100 leading-tight">
+        {formatTime(shift.start)}–{formatTime(shift.end)}
+      </div>
+      <div className="text-cream-100/70 text-[9px] mt-0.5 truncate">
+        {isOpen ? '○ Open' : shift.role}
+      </div>
+      {isSwap && (
+        <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-gold-400 text-ink-500 text-[8px] font-bold grid place-items-center">
+          ↔
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RequestsPanel({
+  title,
+  empty,
+  items,
+}: {
+  title: string;
+  empty: string;
+  items: {
+    id: string;
+    line1: string;
+    line2: string;
+    footer: string;
+    accent: string;
+    onApprove: () => void;
+    onDeny: () => void;
+  }[];
+}) {
+  return (
+    <div className="rounded-xl border border-cream-100/10 bg-ink-400/60">
+      <div className="px-5 py-3 border-b border-cream-100/10 flex items-center justify-between">
+        <div className="font-display text-lg text-cream-100">{title}</div>
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-cream-100/50">
+          {items.length} pending
+        </span>
+      </div>
+      {items.length === 0 ? (
+        <div className="px-5 py-8 text-center text-sm text-cream-100/50">{empty}</div>
+      ) : (
+        <div className="divide-y divide-cream-100/5">
+          {items.map((item) => (
+            <div key={item.id} className="px-5 py-3.5">
+              <div className="flex items-start gap-3">
+                <span className="h-2 w-2 rounded-full mt-1.5 shrink-0" style={{ background: item.accent }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-cream-100">{item.line1}</div>
+                  <div className="text-xs text-cream-100/70 mt-0.5">{item.line2}</div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-cream-100/40 mt-1.5">
+                    {item.footer}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2 justify-end">
+                <button
+                  onClick={item.onDeny}
+                  className="rounded-full border border-cream-100/15 px-3 py-1 text-xs text-cream-100/70 hover:text-ember-300 hover:border-ember-500/40 transition"
+                >
+                  Deny
+                </button>
+                <button
+                  onClick={item.onApprove}
+                  className="rounded-full bg-gold-400 px-3 py-1 text-xs font-semibold text-ink-500 hover:bg-gold-300 transition"
+                >
+                  Approve
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Employee view ─────────────────────────────────────────────────────
+
+function EmployeeScheduling({
+  actingAs,
+  setActingAs,
+  shifts,
+  setShifts,
+  swaps,
+  setSwaps,
+  timeOff,
+  setTimeOff,
+}: {
+  actingAs: number;
+  setActingAs: (id: number) => void;
+  shifts: Shift[];
+  setShifts: React.Dispatch<React.SetStateAction<Shift[]>>;
+  swaps: SwapRequest[];
+  setSwaps: React.Dispatch<React.SetStateAction<SwapRequest[]>>;
+  timeOff: TimeOff[];
+  setTimeOff: React.Dispatch<React.SetStateAction<TimeOff[]>>;
+}) {
+  const me = staff.find((s) => s.id === actingAs)!;
+  const r = restaurants.find((x) => x.slug === me.restaurant);
+  const myShifts = shifts.filter((s) => s.employeeId === me.id).sort((a, b) => a.date.localeCompare(b.date));
+  const openShifts = shifts.filter((s) => s.status === 'open');
+  const myHours = myShifts.reduce((sum, s) => sum + hoursBetween(s.start, s.end), 0);
+  const myTimeOff = timeOff.filter((t) => t.employeeId === me.id);
+  const mySwaps = swaps.filter((s) => s.requesterId === me.id);
+
+  const postSwap = (shiftId: string) => {
+    setShifts((arr) => arr.map((s) => (s.id === shiftId ? { ...s, status: 'swap-pending' as const } : s)));
+    setSwaps((arr) => [
+      ...arr,
+      {
+        id: `sw-${Date.now()}`,
+        shiftId,
+        requesterId: me.id,
+        reason: 'Posted for swap',
+        postedAt: 'Just now',
+        status: 'pending',
+        interestedIds: [],
+      },
+    ]);
+  };
+
+  const pickupShift = (shiftId: string) => {
+    setShifts((arr) =>
+      arr.map((s) =>
+        s.id === shiftId
+          ? { ...s, employeeId: me.id, status: 'pickup-pending' as const, restaurantSlug: s.restaurantSlug }
+          : s
+      )
+    );
+  };
+
+  const requestTimeOff = () => {
+    setTimeOff((arr) => [
+      ...arr,
+      {
+        id: `to-${Date.now()}`,
+        employeeId: me.id,
+        start: '2026-05-29',
+        end: '2026-05-30',
+        type: 'PTO',
+        reason: 'Submitted via employee portal',
+        status: 'pending',
+      },
+    ]);
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Acting-as card */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold-400/30 bg-gold-400/[0.06] px-5 py-3">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-gold-400">
+            ◉ Logged in as
+          </span>
+          <div className="text-sm text-cream-100">
+            <span className="font-medium">{me.name}</span>
+            <span className="text-cream-100/60 mx-2">·</span>
+            <span className="text-cream-100/70">{me.role}</span>
+            <span className="text-cream-100/60 mx-2">·</span>
+            <span style={{ color: r?.accent }}>{r?.shortName}</span>
+          </div>
+        </div>
+        <ActingAsPicker actingAs={actingAs} setActingAs={setActingAs} />
+      </div>
+
+      <KpiRow
+        items={[
+          { label: 'My hours · this wk', value: `${myHours.toFixed(0)}h`, hint: `~$${(myHours * 22).toFixed(0)} estimated` },
+          { label: 'My shifts', value: myShifts.length, hint: 'Scheduled this week' },
+          { label: 'Open to pick up', value: openShifts.length, hint: 'Available shifts' },
+          { label: 'My requests', value: mySwaps.length + myTimeOff.length, hint: 'Pending + approved' },
+        ]}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* My schedule */}
+        <div className="lg:col-span-2 rounded-xl border border-cream-100/10 bg-ink-400/60">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-cream-100/10">
+            <div className="font-display text-lg text-cream-100">My schedule</div>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-cream-100/50">
+              May 11 — 17
+            </span>
+          </div>
+          {myShifts.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-cream-100/50">
+              No shifts assigned this week.
+            </div>
+          ) : (
+            <div className="divide-y divide-cream-100/5">
+              {myShifts.map((s) => {
+                const isSwap = s.status === 'swap-pending';
+                const dayIdx = WEEK_DATES.indexOf(s.date);
+                return (
+                  <div key={s.id} className="px-5 py-3.5 flex items-center gap-4">
+                    <div className="text-center w-12 shrink-0">
+                      <div className="font-mono text-[10px] uppercase tracking-wider text-cream-100/50">
+                        {WEEK_DAYS[dayIdx]}
+                      </div>
+                      <div className="font-display text-xl text-cream-100 leading-none mt-0.5">
+                        {s.date.slice(-2)}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-cream-100">
+                        {formatTime(s.start)} — {formatTime(s.end)}
+                        <span className="text-cream-100/50 ml-2 text-xs font-mono">
+                          {hoursBetween(s.start, s.end)}h
+                        </span>
+                      </div>
+                      <div className="text-xs text-cream-100/60 mt-0.5">
+                        {s.role} · {restaurants.find((x) => x.slug === s.restaurantSlug)?.shortName}
+                      </div>
+                    </div>
+                    {isSwap ? (
+                      <span className="rounded-full border border-gold-400/30 bg-gold-400/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-gold-400">
+                        ↔ Swap posted
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => postSwap(s.id)}
+                        className="rounded-full border border-cream-100/15 px-3 py-1 text-xs text-cream-100/70 hover:text-gold-400 hover:border-gold-400/40 transition"
+                      >
+                        Post for swap
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Quick actions */}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-cream-100/10 bg-ink-400/60 p-5">
+            <div className="font-display text-lg text-cream-100">Quick actions</div>
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={requestTimeOff}
+                className="w-full text-left rounded-lg border border-cream-100/10 bg-ink-300/40 px-4 py-3 hover:border-gold-400/40 transition"
+              >
+                <div className="text-sm text-cream-100">Request time off</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-cream-100/50 mt-0.5">
+                  PTO · Sick · Unpaid
+                </div>
+              </button>
+              <button className="w-full text-left rounded-lg border border-cream-100/10 bg-ink-300/40 px-4 py-3 hover:border-gold-400/40 transition">
+                <div className="text-sm text-cream-100">Update availability</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-cream-100/50 mt-0.5">
+                  Set blocked days / hours
+                </div>
+              </button>
+              <button className="w-full text-left rounded-lg border border-cream-100/10 bg-ink-300/40 px-4 py-3 hover:border-gold-400/40 transition">
+                <div className="text-sm text-cream-100">View paystub</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-cream-100/50 mt-0.5">
+                  Last period · May 1–14
+                </div>
+              </button>
+              <button className="w-full text-left rounded-lg border border-cream-100/10 bg-ink-300/40 px-4 py-3 hover:border-gold-400/40 transition">
+                <div className="text-sm text-cream-100">Message my manager</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-cream-100/50 mt-0.5">
+                  {me.role === 'GM' ? 'HQ Ops' : staff.find((s) => s.role === 'GM' && s.restaurant === me.restaurant)?.name ?? 'Manager'}
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-cream-100/10 bg-ink-400/60 p-5">
+            <div className="font-display text-lg text-cream-100">My requests</div>
+            <div className="mt-3 space-y-2">
+              {mySwaps.length === 0 && myTimeOff.length === 0 ? (
+                <div className="text-sm text-cream-100/50 py-2">Nothing pending.</div>
+              ) : (
+                <>
+                  {mySwaps.map((sw) => (
+                    <RequestRow
+                      key={sw.id}
+                      label="Shift swap"
+                      sub={sw.reason}
+                      status={sw.status}
+                    />
+                  ))}
+                  {myTimeOff.map((t) => (
+                    <RequestRow
+                      key={t.id}
+                      label={`${t.type} · ${t.start === t.end ? t.start : `${t.start}–${t.end}`}`}
+                      sub={t.reason}
+                      status={t.status}
+                    />
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Open shifts marketplace */}
+      <div className="rounded-xl border border-cream-100/10 bg-ink-400/60">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-cream-100/10">
+          <div>
+            <div className="font-display text-lg text-cream-100">Available shifts</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-cream-100/50 mt-0.5">
+              Pick up an open shift · {openShifts.length} posted
+            </div>
+          </div>
+        </div>
+        {openShifts.length === 0 ? (
+          <div className="px-5 py-8 text-center text-sm text-cream-100/50">
+            No open shifts right now.
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+            {openShifts.map((s) => {
+              const r = restaurants.find((x) => x.slug === s.restaurantSlug);
+              const dayIdx = WEEK_DATES.indexOf(s.date);
+              return (
+                <div
+                  key={s.id}
+                  className="rounded-lg border border-cream-100/10 bg-ink-300/40 p-4"
+                  style={{ borderLeftColor: r?.accent, borderLeftWidth: 3 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-display text-base text-cream-100">
+                      {WEEK_DAYS[dayIdx]} · {s.date.slice(-5)}
+                    </div>
+                    <span className="font-mono text-[10px] text-cream-100/50">
+                      {hoursBetween(s.start, s.end)}h
+                    </span>
+                  </div>
+                  <div className="text-sm text-cream-100/80 mt-1">
+                    {formatTime(s.start)} — {formatTime(s.end)}
+                  </div>
+                  <div className="text-xs text-cream-100/60 mt-1">
+                    {s.role} · <span style={{ color: r?.accent }}>{r?.shortName}</span>
+                  </div>
+                  <button
+                    onClick={() => pickupShift(s.id)}
+                    className="mt-3 w-full rounded-full bg-gold-400 px-3 py-1.5 text-xs font-semibold text-ink-500 hover:bg-gold-300 transition"
+                  >
+                    Pick up shift →
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ActingAsPicker({
+  actingAs,
+  setActingAs,
+}: {
+  actingAs: number;
+  setActingAs: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const me = staff.find((s) => s.id === actingAs)!;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-full border border-cream-100/15 bg-ink-300/60 px-3 py-1 text-xs hover:border-cream-100/30 transition"
+      >
+        Switch user
+        <span className="text-cream-100/50">▾</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-2 z-40 w-72 rounded-xl border border-cream-100/10 bg-ink-300/95 backdrop-blur-xl shadow-2xl py-1.5 max-h-[60vh] overflow-y-auto"
+            >
+              {staff.map((s) => {
+                const r = restaurants.find((x) => x.slug === s.restaurant);
+                const initials = s.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setActingAs(s.id);
+                      setOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center gap-3 hover:bg-cream-100/5 transition ${
+                      s.id === me.id ? 'text-gold-400' : 'text-cream-100'
+                    }`}
+                  >
+                    <span
+                      className="h-7 w-7 rounded-full grid place-items-center text-[10px] font-semibold text-ink-500 shrink-0"
+                      style={{ background: r?.accent ?? '#D4A24C' }}
+                    >
+                      {initials}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm truncate">{s.name}</div>
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-cream-100/50 truncate">
+                        {s.role} · {r?.shortName}
+                      </div>
+                    </div>
+                    {s.id === me.id && <span className="text-gold-400 text-xs">●</span>}
+                  </button>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function RequestRow({
+  label,
+  sub,
+  status,
+}: {
+  label: string;
+  sub: string;
+  status: 'pending' | 'approved' | 'denied';
+}) {
+  const map = {
+    pending: 'border-gold-400/30 text-gold-400 bg-gold-400/10',
+    approved: 'border-emerald-400/30 text-emerald-300 bg-emerald-500/10',
+    denied: 'border-ember-500/30 text-ember-300 bg-ember-600/10',
+  };
+  return (
+    <div className="rounded-lg border border-cream-100/5 bg-ink-300/40 px-3 py-2 flex items-start gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-cream-100">{label}</div>
+        <div className="text-[10px] text-cream-100/55 line-clamp-1">{sub}</div>
+      </div>
+      <span className={`rounded-full border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider ${map[status]}`}>
+        {status}
+      </span>
     </div>
   );
 }

@@ -249,7 +249,7 @@ export default function Admin() {
           onMenu={() => setSidebarOpen(true)}
         />
         <main className="flex-1 overflow-y-auto bg-ink-500">
-          <div className="mx-auto max-w-[1400px] px-5 py-6 lg:px-8 lg:py-8">
+          <div className="mx-auto max-w-[1400px] px-3 py-4 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
             {section === 'orders' && <OrdersView orders={scopedOrders} scope={scope} />}
             {section === 'menu' && <MenuView scope={scope} />}
             {section === 'analytics' && <AnalyticsView scope={scope} />}
@@ -377,7 +377,7 @@ function TopBar({
 
   return (
     <header className="border-b border-cream-100/10 bg-ink-400/80 backdrop-blur-md">
-      <div className="flex items-center gap-3 px-5 py-3 lg:px-8">
+      <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 lg:px-8">
         <button
           onClick={onMenu}
           className="lg:hidden p-2 -ml-2 text-cream-100/70 hover:text-cream-100"
@@ -389,10 +389,10 @@ function TopBar({
         </button>
 
         <div className="flex-1 min-w-0">
-          <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-cream-100/40">
+          <div className="hidden sm:block font-mono text-[10px] uppercase tracking-[0.28em] text-cream-100/40 truncate">
             {scopeName}
           </div>
-          <h1 className="font-display text-xl lg:text-2xl text-cream-100 leading-tight truncate">
+          <h1 className="font-display text-lg sm:text-xl lg:text-2xl text-cream-100 leading-tight truncate">
             {title}
           </h1>
         </div>
@@ -421,18 +421,18 @@ function ScopePicker({ scope, setScope }: { scope: Scope; setScope: (s: Scope) =
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-lg border border-cream-100/15 bg-ink-300/60 pl-2.5 pr-3 py-1.5 text-sm hover:border-cream-100/30 transition"
+        className="flex items-center gap-2 rounded-lg border border-cream-100/15 bg-ink-300/60 pl-1.5 sm:pl-2.5 pr-2 sm:pr-3 py-1 sm:py-1.5 text-sm hover:border-cream-100/30 transition"
       >
-        <span className="h-6 w-6 rounded-md bg-gradient-to-br from-gold-400 to-ember-600 grid place-items-center text-[10px] font-semibold text-ink-500">
+        <span className="h-7 w-7 sm:h-6 sm:w-6 rounded-md bg-gradient-to-br from-gold-400 to-ember-600 grid place-items-center text-[10px] font-semibold text-ink-500">
           {scope === 'all' ? 'HQ' : current.name.charAt(0)}
         </span>
-        <div className="text-left">
+        <div className="hidden sm:block text-left">
           <div className="text-cream-100 text-sm leading-none">{current.name}</div>
           <div className="text-[9px] font-mono uppercase tracking-wider text-cream-100/50 mt-0.5">
             {current.sub}
           </div>
         </div>
-        <span className="text-cream-100/50 text-xs ml-1">▾</span>
+        <span className="text-cream-100/50 text-xs sm:ml-1">▾</span>
       </button>
 
       <AnimatePresence>
@@ -546,7 +546,7 @@ function OrdersView({ orders, scope }: { orders: Order[]; scope: Scope }) {
       </div>
 
       <div className="rounded-xl border border-cream-100/10 bg-ink-400/60 overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-4 py-3 border-b border-cream-100/10 text-[10px] font-mono uppercase tracking-[0.2em] text-cream-100/50">
+        <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-3 border-b border-cream-100/10 text-[10px] font-mono uppercase tracking-[0.2em] text-cream-100/50">
           <div className="col-span-2">Order</div>
           <div className="col-span-2">Channel</div>
           <div className="col-span-3">Customer</div>
@@ -573,38 +573,61 @@ function OrderRow({ order }: { order: Order }) {
     <div className="border-t border-cream-100/5 first:border-0">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="grid grid-cols-12 gap-3 px-4 py-3 w-full text-left items-center hover:bg-cream-100/5 transition"
+        className="w-full text-left hover:bg-cream-100/5 transition"
       >
-        <div className="col-span-2">
-          <div className="font-mono text-sm text-cream-100">{order.id}</div>
-          <div className="text-[10px] text-cream-100/50">{order.time}</div>
+        {/* Desktop: 12-col table layout */}
+        <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-3 items-center">
+          <div className="col-span-2">
+            <div className="font-mono text-sm text-cream-100">{order.id}</div>
+            <div className="text-[10px] text-cream-100/50">{order.time}</div>
+          </div>
+          <div className="col-span-2 text-sm text-cream-100/80">
+            <div>{order.channel}</div>
+            <div className="text-[10px] text-cream-100/50">{order.ref}</div>
+          </div>
+          <div className="col-span-3 text-sm text-cream-100 truncate">{order.customer}</div>
+          <div className="col-span-2 flex items-center gap-2 text-xs text-cream-100/70 truncate">
+            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
+            <span className="truncate">{r?.shortName ?? order.restaurant}</span>
+          </div>
+          <div className="col-span-1 text-right font-mono text-sm text-cream-100">
+            ${total.toFixed(2)}
+          </div>
+          <div className="col-span-2 text-right">
+            <StatusPill status={order.status} />
+          </div>
         </div>
-        <div className="col-span-2 text-sm text-cream-100/80">
-          <div>{order.channel}</div>
-          <div className="text-[10px] text-cream-100/50">{order.ref}</div>
-        </div>
-        <div className="col-span-3 text-sm text-cream-100 truncate">{order.customer}</div>
-        <div className="col-span-2 flex items-center gap-2 text-xs text-cream-100/70 truncate">
-          <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
-          <span className="truncate">{r?.shortName ?? order.restaurant}</span>
-        </div>
-        <div className="col-span-1 text-right font-mono text-sm text-cream-100">
-          ${total.toFixed(2)}
-        </div>
-        <div className="col-span-2 text-right">
-          <StatusPill status={order.status} />
+
+        {/* Mobile: stacked card */}
+        <div className="md:hidden px-4 py-3 space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="font-mono text-sm text-cream-100">{order.id}</div>
+              <div className="text-[10px] text-cream-100/50">{order.time} · {order.channel}</div>
+            </div>
+            <StatusPill status={order.status} />
+          </div>
+          <div className="text-sm text-cream-100 truncate">{order.customer}</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-cream-100/70 min-w-0">
+              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
+              <span className="truncate">{r?.shortName ?? order.restaurant}</span>
+              <span className="text-cream-100/40 text-[10px] truncate">· {order.ref}</span>
+            </div>
+            <div className="font-mono text-sm text-cream-100 shrink-0">${total.toFixed(2)}</div>
+          </div>
         </div>
       </button>
       {open && (
         <div className="px-4 pb-4 pt-1 bg-ink-500/40">
           <div className="rounded-lg border border-cream-100/5 bg-ink-300/40 divide-y divide-cream-100/5">
             {order.items.map((it, i) => (
-              <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                <div>
+              <div key={i} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <div className="min-w-0">
                   <span className="text-cream-100">{it.name}</span>
                   <span className="ml-2 text-cream-100/50 font-mono text-xs">×{it.qty}</span>
                 </div>
-                <div className="font-mono text-cream-100/80">${(it.price * it.qty).toFixed(2)}</div>
+                <div className="font-mono text-cream-100/80 shrink-0">${(it.price * it.qty).toFixed(2)}</div>
               </div>
             ))}
           </div>
@@ -685,7 +708,7 @@ function MenuView({ scope }: { scope: Scope }) {
       )}
 
       <div className="rounded-xl border border-cream-100/10 bg-ink-400/60">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-cream-100/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 py-4 border-b border-cream-100/10">
           <div>
             <div className="font-display text-lg text-cream-100">{current.name} — Highlights</div>
             <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-cream-100/50 mt-0.5">
@@ -703,27 +726,51 @@ function MenuView({ scope }: { scope: Scope }) {
         </div>
         <div className="divide-y divide-cream-100/5">
           {current.menuHighlights.map((m, i) => (
-            <div key={i} className="grid grid-cols-12 gap-4 px-5 py-4 items-center hover:bg-cream-100/5 transition">
-              <div className="col-span-7">
-                <div className="text-cream-100 text-sm font-medium">{m.name}</div>
-                <div className="text-cream-100/60 text-xs mt-0.5 line-clamp-1">{m.description}</div>
-              </div>
-              <div className="col-span-2 text-xs">
-                {m.tag ? (
-                  <span className="rounded-full border border-gold-400/30 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-gold-400">
-                    {m.tag}
+            <div key={i} className="px-4 md:px-5 py-4 hover:bg-cream-100/5 transition">
+              {/* Desktop layout */}
+              <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                <div className="col-span-7">
+                  <div className="text-cream-100 text-sm font-medium">{m.name}</div>
+                  <div className="text-cream-100/60 text-xs mt-0.5 line-clamp-1">{m.description}</div>
+                </div>
+                <div className="col-span-2 text-xs">
+                  {m.tag ? (
+                    <span className="rounded-full border border-gold-400/30 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-gold-400">
+                      {m.tag}
+                    </span>
+                  ) : (
+                    <span className="text-cream-100/40 text-[10px] font-mono uppercase">—</span>
+                  )}
+                </div>
+                <div className="col-span-1 text-right font-mono text-sm text-cream-100">
+                  ${m.price}
+                </div>
+                <div className="col-span-2 text-right">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300/80">
+                    ● Active
                   </span>
-                ) : (
-                  <span className="text-cream-100/40 text-[10px] font-mono uppercase">—</span>
-                )}
+                </div>
               </div>
-              <div className="col-span-1 text-right font-mono text-sm text-cream-100">
-                ${m.price}
-              </div>
-              <div className="col-span-2 text-right">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300/80">
-                  ● Active
-                </span>
+
+              {/* Mobile layout */}
+              <div className="md:hidden space-y-1.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-cream-100 text-sm font-medium flex-1 min-w-0">{m.name}</div>
+                  <div className="font-mono text-sm text-cream-100 shrink-0">${m.price}</div>
+                </div>
+                <div className="text-cream-100/60 text-xs line-clamp-2">{m.description}</div>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  {m.tag ? (
+                    <span className="rounded-full border border-gold-400/30 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-gold-400">
+                      {m.tag}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300/80">
+                    ● Active
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -830,23 +877,46 @@ function AnalyticsView({ scope }: { scope: Scope }) {
       </div>
 
       <div className="rounded-xl border border-cream-100/10 bg-ink-400/60">
-        <div className="px-5 py-4 border-b border-cream-100/10">
+        <div className="px-4 md:px-5 py-4 border-b border-cream-100/10">
           <div className="font-display text-lg text-cream-100">Top sellers · 7d</div>
         </div>
         <div className="divide-y divide-cream-100/5">
           {topItems.map((item, i) => {
             const r = restaurants.find((x) => x.slug === item.restaurant);
             return (
-              <div key={i} className="grid grid-cols-12 gap-3 px-5 py-3 items-center">
-                <div className="col-span-1 font-mono text-cream-100/50 text-sm">#{i + 1}</div>
-                <div className="col-span-5 text-sm text-cream-100">{item.name}</div>
-                <div className="col-span-3 flex items-center gap-2 text-xs text-cream-100/60">
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: r?.accent }} />
-                  {r?.shortName}
+              <div key={i} className="px-4 md:px-5 py-3">
+                {/* Desktop */}
+                <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+                  <div className="col-span-1 font-mono text-cream-100/50 text-sm">#{i + 1}</div>
+                  <div className="col-span-5 text-sm text-cream-100">{item.name}</div>
+                  <div className="col-span-3 flex items-center gap-2 text-xs text-cream-100/60">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: r?.accent }} />
+                    {r?.shortName}
+                  </div>
+                  <div className="col-span-1 text-right font-mono text-xs text-cream-100/70">{item.units}</div>
+                  <div className="col-span-2 text-right font-mono text-sm text-gold-400">
+                    ${item.revenue.toLocaleString()}
+                  </div>
                 </div>
-                <div className="col-span-1 text-right font-mono text-xs text-cream-100/70">{item.units}</div>
-                <div className="col-span-2 text-right font-mono text-sm text-gold-400">
-                  ${item.revenue.toLocaleString()}
+
+                {/* Mobile */}
+                <div className="md:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2 min-w-0 flex-1">
+                      <span className="font-mono text-cream-100/50 text-sm shrink-0">#{i + 1}</span>
+                      <div className="min-w-0">
+                        <div className="text-sm text-cream-100">{item.name}</div>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-cream-100/60">
+                          <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
+                          <span className="truncate">{r?.shortName}</span>
+                          <span className="text-cream-100/40">· {item.units} sold</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="font-mono text-sm text-gold-400 shrink-0">
+                      ${item.revenue.toLocaleString()}
+                    </div>
+                  </div>
                 </div>
               </div>
             );
@@ -969,7 +1039,7 @@ function EventsView({ scope }: { scope: Scope }) {
       />
 
       <div className="rounded-xl border border-cream-100/10 bg-ink-400/60 overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-cream-100/10 text-[10px] font-mono uppercase tracking-[0.2em] text-cream-100/50">
+        <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 border-b border-cream-100/10 text-[10px] font-mono uppercase tracking-[0.2em] text-cream-100/50">
           <div className="col-span-2">Date</div>
           <div className="col-span-4">Event</div>
           <div className="col-span-2">Type</div>
@@ -979,33 +1049,57 @@ function EventsView({ scope }: { scope: Scope }) {
         </div>
         {visible.map((e) => {
           const r = restaurants.find((x) => x.slug === e.restaurant);
+          const statusClass =
+            e.status === 'Confirmed'
+              ? 'border-emerald-400/30 text-emerald-300'
+              : e.status === 'Deposit Paid'
+              ? 'border-gold-400/30 text-gold-400'
+              : 'border-cream-100/15 text-cream-100/60';
           return (
-            <div key={e.id} className="grid grid-cols-12 gap-3 px-5 py-3 items-center border-t border-cream-100/5 first:border-0 hover:bg-cream-100/5 transition">
-              <div className="col-span-2">
-                <div className="text-sm text-cream-100">{e.date}</div>
-                <div className="text-[10px] text-cream-100/50">{e.time}</div>
+            <div
+              key={e.id}
+              className="px-4 md:px-5 py-3 border-t border-cream-100/5 first:border-0 hover:bg-cream-100/5 transition"
+            >
+              {/* Desktop */}
+              <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+                <div className="col-span-2">
+                  <div className="text-sm text-cream-100">{e.date}</div>
+                  <div className="text-[10px] text-cream-100/50">{e.time}</div>
+                </div>
+                <div className="col-span-4">
+                  <div className="text-sm text-cream-100">{e.name}</div>
+                </div>
+                <div className="col-span-2 text-xs text-cream-100/70">{e.type}</div>
+                <div className="col-span-2 flex items-center gap-2 text-xs text-cream-100/70 min-w-0">
+                  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
+                  <span className="truncate">{r?.shortName}</span>
+                </div>
+                <div className="col-span-1 text-right font-mono text-sm text-cream-100">{e.guests}</div>
+                <div className="col-span-1 text-right">
+                  <span className={`inline-block rounded-full border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider ${statusClass}`}>
+                    {e.status}
+                  </span>
+                </div>
               </div>
-              <div className="col-span-4">
-                <div className="text-sm text-cream-100">{e.name}</div>
-              </div>
-              <div className="col-span-2 text-xs text-cream-100/70">{e.type}</div>
-              <div className="col-span-2 flex items-center gap-2 text-xs text-cream-100/70 min-w-0">
-                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
-                <span className="truncate">{r?.shortName}</span>
-              </div>
-              <div className="col-span-1 text-right font-mono text-sm text-cream-100">{e.guests}</div>
-              <div className="col-span-1 text-right">
-                <span
-                  className={`inline-block rounded-full border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider ${
-                    e.status === 'Confirmed'
-                      ? 'border-emerald-400/30 text-emerald-300'
-                      : e.status === 'Deposit Paid'
-                      ? 'border-gold-400/30 text-gold-400'
-                      : 'border-cream-100/15 text-cream-100/60'
-                  }`}
-                >
-                  {e.status}
-                </span>
+
+              {/* Mobile */}
+              <div className="md:hidden space-y-1.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm text-cream-100 flex-1 min-w-0">{e.name}</div>
+                  <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider ${statusClass}`}>
+                    {e.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-cream-100/65 min-w-0">
+                  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
+                  <span className="truncate">{r?.shortName}</span>
+                  <span className="text-cream-100/40">·</span>
+                  <span className="text-cream-100/55 truncate">{e.type}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-cream-100/60 font-mono">{e.date} · {e.time}</span>
+                  <span className="font-mono text-cream-100">{e.guests} guests</span>
+                </div>
               </div>
             </div>
           );
@@ -1041,7 +1135,7 @@ function StaffView({ scope }: { scope: Scope }) {
       />
 
       <div className="rounded-xl border border-cream-100/10 bg-ink-400/60 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-cream-100/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 py-4 border-b border-cream-100/10">
           <div className="font-display text-lg text-cream-100">Team</div>
           <div className="flex gap-2">
             <button className="rounded-full border border-cream-100/15 px-3 py-1.5 text-xs hover:border-cream-100/40 transition">
@@ -1052,7 +1146,7 @@ function StaffView({ scope }: { scope: Scope }) {
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-cream-100/10 text-[10px] font-mono uppercase tracking-[0.2em] text-cream-100/50">
+        <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-3 border-b border-cream-100/10 text-[10px] font-mono uppercase tracking-[0.2em] text-cream-100/50">
           <div className="col-span-3">Name</div>
           <div className="col-span-2">Role</div>
           <div className="col-span-3">Location</div>
@@ -1062,45 +1156,66 @@ function StaffView({ scope }: { scope: Scope }) {
         </div>
         {visible.map((s) => {
           const r = restaurants.find((x) => x.slug === s.restaurant);
-          const initials = s.name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .slice(0, 2);
+          const initials = s.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
+          const statusColor =
+            s.status === 'on' ? 'text-emerald-300' : s.status === 'break' ? 'text-gold-400' : 'text-cream-100/40';
+          const statusLabel = s.status === 'on' ? 'On' : s.status === 'break' ? 'Break' : 'Off';
           return (
             <div
               key={s.id}
-              className="grid grid-cols-12 gap-3 px-5 py-3 items-center border-t border-cream-100/5 first:border-0 hover:bg-cream-100/5 transition"
+              className="px-4 md:px-5 py-3 border-t border-cream-100/5 first:border-0 hover:bg-cream-100/5 transition"
             >
-              <div className="col-span-3 flex items-center gap-3">
+              {/* Desktop */}
+              <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+                <div className="col-span-3 flex items-center gap-3">
+                  <div
+                    className="h-8 w-8 rounded-full grid place-items-center text-xs font-semibold text-ink-500"
+                    style={{ background: r?.accent ?? '#D4A24C' }}
+                  >
+                    {initials}
+                  </div>
+                  <div className="text-sm text-cream-100">{s.name}</div>
+                </div>
+                <div className="col-span-2 text-xs text-cream-100/70">{s.role}</div>
+                <div className="col-span-3 flex items-center gap-2 text-xs text-cream-100/70 min-w-0">
+                  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
+                  <span className="truncate">{r?.shortName}</span>
+                </div>
+                <div className="col-span-2 text-xs font-mono text-cream-100/60">{s.shift}</div>
+                <div className="col-span-1 text-right text-xs font-mono text-cream-100/60">{s.yearsWith}y</div>
+                <div className="col-span-1 text-right">
+                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider ${statusColor}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    {statusLabel}
+                  </span>
+                </div>
+              </div>
+
+              {/* Mobile */}
+              <div className="md:hidden flex items-start gap-3">
                 <div
-                  className="h-8 w-8 rounded-full grid place-items-center text-xs font-semibold text-ink-500"
+                  className="h-9 w-9 rounded-full grid place-items-center text-xs font-semibold text-ink-500 shrink-0"
                   style={{ background: r?.accent ?? '#D4A24C' }}
                 >
                   {initials}
                 </div>
-                <div className="text-sm text-cream-100">{s.name}</div>
-              </div>
-              <div className="col-span-2 text-xs text-cream-100/70">{s.role}</div>
-              <div className="col-span-3 flex items-center gap-2 text-xs text-cream-100/70 min-w-0">
-                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r?.accent }} />
-                <span className="truncate">{r?.shortName}</span>
-              </div>
-              <div className="col-span-2 text-xs font-mono text-cream-100/60">{s.shift}</div>
-              <div className="col-span-1 text-right text-xs font-mono text-cream-100/60">{s.yearsWith}y</div>
-              <div className="col-span-1 text-right">
-                <span
-                  className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider ${
-                    s.status === 'on'
-                      ? 'text-emerald-300'
-                      : s.status === 'break'
-                      ? 'text-gold-400'
-                      : 'text-cream-100/40'
-                  }`}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                  {s.status === 'on' ? 'On' : s.status === 'break' ? 'Break' : 'Off'}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-sm text-cream-100 truncate">{s.name}</div>
+                    <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider ${statusColor}`}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {statusLabel}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-cream-100/65 mt-0.5 truncate">
+                    {s.role} <span className="text-cream-100/40">·</span>{' '}
+                    <span style={{ color: r?.accent }}>{r?.shortName}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-cream-100/55 mt-1">
+                    <span>{s.shift}</span>
+                    <span>{s.yearsWith}y tenure</span>
+                  </div>
+                </div>
               </div>
             </div>
           );
@@ -2182,22 +2297,22 @@ function KpiRow({
   items: { label: string; value: string | number; hint: string }[];
 }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
       {items.map((k, i) => (
         <motion.div
           key={k.label}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.04, duration: 0.4 }}
-          className="rounded-xl border border-cream-100/10 bg-ink-400/60 p-4"
+          className="rounded-xl border border-cream-100/10 bg-ink-400/60 p-3 sm:p-4"
         >
-          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-cream-100/50">
+          <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.22em] text-cream-100/50 truncate">
             {k.label}
           </div>
-          <div className="mt-2 font-display text-2xl lg:text-3xl text-cream-100 leading-none">
+          <div className="mt-1.5 sm:mt-2 font-display text-xl sm:text-2xl lg:text-3xl text-cream-100 leading-none">
             {k.value}
           </div>
-          <div className="mt-2 text-[11px] text-cream-100/55">{k.hint}</div>
+          <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-[11px] text-cream-100/55 line-clamp-2">{k.hint}</div>
         </motion.div>
       ))}
     </div>
